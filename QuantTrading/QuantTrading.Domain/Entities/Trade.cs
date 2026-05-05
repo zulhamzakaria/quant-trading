@@ -37,6 +37,5 @@ public sealed class Trade
             Timestamp = DateTimeOffset.UtcNow
         };
     }
-
 }
 
