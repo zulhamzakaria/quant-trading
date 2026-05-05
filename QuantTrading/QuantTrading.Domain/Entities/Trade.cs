@@ -17,8 +17,10 @@ public sealed class Trade
         //EF Core requires a parameterless constructor
     }
 
-    public static Trade Create(string symbol, decimal price, decimal quantity, TradeSide side)
+    public static Result<Trade> Create(string symbol, decimal price, decimal quantity, TradeSide side)
     {
+        if(string.IsNullOrWhiteSpace(symbol))
+            return Result.Failure<Trade>(new Error("InvalidSymbol", "Symbol cannot be null or empty."));
         return new Trade
         {
             Id = Guid.NewGuid(),
