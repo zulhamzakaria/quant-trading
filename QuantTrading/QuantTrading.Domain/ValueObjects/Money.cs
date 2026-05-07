@@ -13,10 +13,10 @@ public sealed record Money(decimal Amount, Currency Currency)
     }
 
     // Only allow addition if currencies match
-    public static Result<Money> operator +(Money a, Money b)
+    public static Money operator +(Money a, Money b)
     {
         if (a.Currency != b.Currency)
-            return Result.Failure<Money>(DomainErrors.Money.CurrencyMismatch);
+            throw new Exception(DomainErrors.Money.CurrencyMismatch.ToString());
 
         return new Money(a.Amount + b.Amount, a.Currency);
     }
