@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuantTrading.Domain.ValueObjects
+namespace QuantTrading.Domain.Models
 {
-    internal class Signal
+    internal class BacktestResult
     {
     }
 }

@@ -22,4 +22,18 @@ public static class DomainErrors
         public static readonly Error MarketClosed 
             = new("Trade.MarketClosed", "Cannot execute trade because the target market is currently closed.");
     }
+
+    public static class Money
+    {
+        // Static Method
+        //public static Error Required()
+        //    => new("Money.Required", "Amount/Currency are required.");
+        //Static Field
+         public static Error Required
+            => new("Money.Required", "Amount/Currency are required.");
+        public static readonly Error CurrencyMismatch
+            = new("Money.CurrencyMismatched", "Currency must match.");
+        public static readonly Error InvalidCurrency
+            = new("Money.InvalidCurrency", "The currency provided is invalid.");
+    }
 }
