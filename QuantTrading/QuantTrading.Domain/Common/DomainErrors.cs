@@ -33,7 +33,11 @@ public static class DomainErrors
             => new("Money.Required", "Amount/Currency are required.");
         public static readonly Error CurrencyMismatch
             = new("Money.CurrencyMismatched", "Currency must match.");
-        public static readonly Error InvalidCurrency
-            = new("Money.InvalidCurrency", "The currency provided is invalid.");
+    }
+
+    public static class Currency
+    {
+        public static readonly Error InvalidCode
+            = new("Currency.InvalidCode", "Invalid Currency Code.");
     }
 }
