@@ -7,7 +7,7 @@ public enum TradeSide
     Sell = 2
 }
 
-public enum SignalDirection
+public enum SignalType
 {
     Hold = 0,
     Bullish = 1, // Price goes up
