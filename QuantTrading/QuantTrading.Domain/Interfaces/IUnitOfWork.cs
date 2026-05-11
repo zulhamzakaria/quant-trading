@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace QuantTrading.Domain.Interfaces
 {
-    internal class IRepository
+    internal interface IUnitOfWork
     {
     }
 }
