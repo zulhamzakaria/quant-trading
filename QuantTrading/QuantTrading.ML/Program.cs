@@ -15,8 +15,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 using IHost host = builder.Build();
 
 
-await host.RunAsync();
-
 //using (var scope = host.Services.CreateScope())
 //{
 //    var services = scope.ServiceProvider;
