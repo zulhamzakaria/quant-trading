@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.ML", "QuantTra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Domain", "QuantTrading.Domain\QuantTrading.Domain.csproj", "{2952A83C-2AD8-4E53-A05B-957ABCD6D4E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Infrastucture", "QuantTrading.Infrastucture\QuantTrading.Infrastucture.csproj", "{443B9387-5F6B-4F78-8E27-F6B4742F8DC9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Infrastructure", "QuantTrading.Infrastucture\QuantTrading.Infrastructure.csproj", "{443B9387-5F6B-4F78-8E27-F6B4742F8DC9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Application", "QuantTrading.Application\QuantTrading.Application.csproj", "{B3C4D262-DD37-4B91-9194-B444526795CA}"
 EndProject

@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuantTrading.Domain.Entities;
 
-namespace QuantTrading.Infrastucture;
+namespace QuantTrading.Infrastructure;
 
 public sealed class AppDbContext : DbContext
 {
