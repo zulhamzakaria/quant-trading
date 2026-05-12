@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuantTrading.Domain.Entities;
-using System.Diagnostics;
 
 namespace QuantTrading.Infrastucture;
 
