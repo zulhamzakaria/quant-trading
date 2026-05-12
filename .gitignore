@@ -59,3 +59,6 @@ nunit-*.xml
 # Visual Studio cache and settings
 .vs/
 **/.vs/
+
+# Settings files
+appsettings.Production.json 
