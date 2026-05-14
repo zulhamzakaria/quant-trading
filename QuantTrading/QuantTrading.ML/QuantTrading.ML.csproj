@@ -13,8 +13,4 @@
     <PackageReference Include="Npgsql" Version="8.0.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\QuantTrading.Infrastucture\QuantTrading.Infrastructure.csproj" />
-  </ItemGroup>
-
 </Project>
