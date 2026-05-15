@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using QuantTrading.Domain.Entities;
 
-namespace QuantTrading.Application.Interfaces
+namespace QuantTrading.Application.Interfaces;
+
+public interface ITradeRepository
 {
-    internal interface ITradeRepository
-    {
-    }
+    Task<Trade?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    void Add(Trade trade);
+    void Update(Trade trade);
+    void Delete(Trade trade);
 }
