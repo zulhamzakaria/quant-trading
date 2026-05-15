@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\QuantTrading.Domain\QuantTrading.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
