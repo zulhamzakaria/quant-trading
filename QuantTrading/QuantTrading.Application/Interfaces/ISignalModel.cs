@@ -1,5 +1,9 @@
-﻿namespace QuantTrading.Application.Interfaces;
+﻿using QuantTrading.Application.Models;
+using QuantTrading.Domain.Models;
 
-public class ISignalModel
+namespace QuantTrading.Application.Interfaces;
+
+public interface ISignalModel
 {
+    Signal Predict(MarketData data);
 }
