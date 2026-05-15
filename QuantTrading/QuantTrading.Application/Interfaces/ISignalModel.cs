@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuantTrading.Domain.Interfaces
+namespace QuantTrading.Application.Interfaces
 {
-    internal interface IUnitOfWork
+    internal class ISignalModel
     {
     }
 }
