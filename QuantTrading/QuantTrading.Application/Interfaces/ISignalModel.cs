@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace QuantTrading.Application.Interfaces;
 
-namespace QuantTrading.Application.Interfaces
+public class ISignalModel
 {
-    internal class ISignalModel
-    {
-    }
 }
