@@ -19,13 +19,13 @@ public sealed class Trade
     public static Result<Trade> Create(string symbol, decimal price, decimal quantity, TradeSide side)
     {
         if(string.IsNullOrWhiteSpace(symbol))
-            return Result.Failure<Trade>(DomainErrors.Trade.InvalidSymbol);
+            return Result.Failure<Trade>(DomainErrors.TradeError.InvalidSymbol);
         if(price <= 0)
-            return Result.Failure<Trade>(DomainErrors.Trade.InvalidPrice);
+            return Result.Failure<Trade>(DomainErrors.TradeError.InvalidPrice);
         if(quantity <= 0)
-            return Result.Failure<Trade>(DomainErrors.Trade.InvalidQuantity);
+            return Result.Failure<Trade>(DomainErrors.TradeError.InvalidQuantity);
         if(!Enum.IsDefined(typeof(TradeSide), side) || side == TradeSide.None)
-            return Result.Failure<Trade>(DomainErrors.Trade.InvalidSide);
+            return Result.Failure<Trade>(DomainErrors.TradeError.InvalidSide);
 
         return new Trade
         {

@@ -15,7 +15,7 @@ public sealed record Currency
         if (string.IsNullOrWhiteSpace(code) 
             || code.Length != 3 
             || !code.All(char.IsLetter))
-            return Result.Failure<Currency>(DomainErrors.Currency.InvalidCode);
+            return Result.Failure<Currency>(DomainErrors.CurrencyError.InvalidCode);
 
         return new Currency(code);
     }

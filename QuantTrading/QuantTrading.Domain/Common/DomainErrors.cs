@@ -2,14 +2,14 @@
 
 public static class DomainErrors
 {
-    public static class Portfolio
+    public static class PortfolioError
     {
         public static readonly Error NotFound
             = new("Portfolio.NotFound", "The specified portfolio was not found.");
         public static readonly Error InsufficientFunds
             = new("Portfolio.InsufficientFunds", "The portfolio does not have sufficient funds for this operation.");
     }
-    public static class Trade
+    public static class TradeError
     {
         public static readonly Error InvalidSymbol
             = new("Trade.InvalidSymbol", "The symbol provided for the trade is invalid.");
@@ -23,7 +23,7 @@ public static class DomainErrors
             = new("Trade.MarketClosed", "Cannot execute trade because the target market is currently closed.");
     }
 
-    public static class Money
+    public static class MoneyError
     {
         // Static Method
         //public static Error Required()
@@ -35,7 +35,7 @@ public static class DomainErrors
             = new("Money.CurrencyMismatched", "Currency must match.");
     }
 
-    public static class Currency
+    public static class CurrencyError
     {
         public static readonly Error InvalidCode
             = new("Currency.InvalidCode", "Invalid Currency Code.");
