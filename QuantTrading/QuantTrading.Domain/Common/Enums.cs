@@ -10,8 +10,8 @@ public enum TradeSide
 public enum SignalType
 {
     Hold = 0,
-    Bullish = 1, // Price goes up
-    Bearish = 2  // Price goes down
+    Buy = 1, // Price goes up
+    Sell = 2  // Price goes down
 }
 
 public enum PositionStatus

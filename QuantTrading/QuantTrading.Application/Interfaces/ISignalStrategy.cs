@@ -1,8 +1,9 @@
-﻿using QuantTrading.Domain.Models;
+﻿using QuantTrading.Application.Models;
+using QuantTrading.Domain.Models;
 
 namespace QuantTrading.Application.Interfaces;
 
 public interface ISignalStrategy
 {
-    Signal Update(IMarketData data);
+    Signal Update(MarketData data);
 }
