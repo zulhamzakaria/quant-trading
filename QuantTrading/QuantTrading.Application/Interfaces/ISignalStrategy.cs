@@ -2,7 +2,7 @@
 
 namespace QuantTrading.Application.Interfaces;
 
-public interface ISignalModel
+public interface ISignalStrategy
 {
-    Signal Predict(IMarketData data);
+    Signal Update(IMarketData data);
 }
