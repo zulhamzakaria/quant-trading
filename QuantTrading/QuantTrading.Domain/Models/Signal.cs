@@ -45,8 +45,8 @@ public sealed record Signal
         => new(symbol, SignalType.Sell, confidence, timestamp, strategyName);
 
     public static Signal Hold(string symbol, DateTimeOffset timestamp,
-        decimal confidence, string strategyName)
-        => new(symbol, SignalType.Hold, 0, timestamp, "None");
+        decimal confidence = 0, string strategyName = "None")
+        => new(symbol, SignalType.Hold, confidence, timestamp, strategyName);
 
 
 }
