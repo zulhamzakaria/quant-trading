@@ -21,18 +21,32 @@ public sealed record Signal
         symbol = symbol?.Trim().ToUpperInvariant() ?? string.Empty;
         strategyName = strategyName?.Trim() ?? string.Empty;
 
-        if(string.IsNullOrWhiteSpace(symbol))
+        if (string.IsNullOrWhiteSpace(symbol))
             throw new ArgumentException("Symbol isrequired.", nameof(symbol));
-         if(string.IsNullOrWhiteSpace(strategyName))
+        if (string.IsNullOrWhiteSpace(strategyName))
             throw new ArgumentException("Strategy name is required.", nameof(strategyName));
         if (confidence < 0 || confidence > 1)
             throw new ArgumentOutOfRangeException(nameof(confidence), "Confidence must be between 0 and 1.");
 
-        Symbol = symbol; 
-        Type = type; 
-        Confidence = confidence; 
-        Timestamp = timestamp; 
+        Symbol = symbol;
+        Type = type;
+        Confidence = confidence;
+        Timestamp = timestamp;
         StrategyName = strategyName;
 
     }
+
+    public static Signal Buy(string symbol, DateTimeOffset timestamp,
+        decimal confidence, string strategyName)
+        => new(symbol, SignalType.Buy, confidence, timestamp, strategyName);
+
+    public static Signal Sell(string symbol, DateTimeOffset timestamp,
+        decimal confidence, string strategyName)
+        => new(symbol, SignalType.Sell, confidence, timestamp, strategyName);
+
+    public static Signal Hold(string symbol, DateTimeOffset timestamp,
+        decimal confidence, string strategyName)
+        => new(symbol, SignalType.Hold, 0, timestamp, "None");
+
+
 }
