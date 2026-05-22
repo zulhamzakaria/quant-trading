@@ -21,7 +21,7 @@ public sealed class Portfolio
 
     public bool HasOpenPositionForSymbol(string symbol)
     {
-        return OpenPositions.Any(p => p.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+        return _positions.Any(p => p.IsOpen && p.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
     }
 
     public void OpenNewPosition(Position position)
@@ -32,7 +32,7 @@ public sealed class Portfolio
     public decimal CalculateTotalEquity(IReadOnlyDictionary<string, decimal> currentPrices)
     {
         decimal positionsValue = 0m;
-        foreach (var position in _positions)
+        foreach (var position in _positions.Where(p => p.IsOpen))
         {
             if (!currentPrices.TryGetValue(position.Symbol, out var currentPrice))
             {
