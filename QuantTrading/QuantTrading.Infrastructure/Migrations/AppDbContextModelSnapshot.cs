@@ -33,7 +33,7 @@ namespace QuantTrading.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Portfolios");
+                    b.ToTable("Portfolios", (string)null);
                 });
 
             modelBuilder.Entity("QuantTrading.Domain.Entities.Position", b =>
@@ -59,7 +59,7 @@ namespace QuantTrading.Infrastructure.Migrations
 
                     b.HasIndex("PortfolioId");
 
-                    b.ToTable("Position");
+                    b.ToTable("Position", (string)null);
                 });
 
             modelBuilder.Entity("QuantTrading.Domain.Entities.Trade", b =>
@@ -86,7 +86,7 @@ namespace QuantTrading.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Trades");
+                    b.ToTable("Trades", (string)null);
                 });
 
             modelBuilder.Entity("QuantTrading.Domain.Entities.Position", b =>
