@@ -13,7 +13,18 @@ public sealed class MaxPositionSizingRule : IRiskRule
     }
     public bool Allows(Signal signal, Portfolio portfolio, out string rejection)
     {
-        decimal maxAllowedValue = portfolio.TotalEquity * _maxPortfolioAllocationPercent;
+
+        var currentPrices = new Dictionary<string, decimal>
+        {
+            {
+                signal.Symbol, 
+                signal.TargetValue / signal.Confidence
+            }
+        };
+
+        decimal totalEquity = portfolio.CalculateTotalEquity(currentPrices);
+
+        decimal maxAllowedValue = totalEquity * _maxPortfolioAllocationPercent;
         if(signal.TargetValue > maxAllowedValue)
         {
             rejection = $"Position size of {signal.TargetValue:C} exceeds max allowed allocation of {maxAllowedValue:C} ({_maxPortfolioAllocationPercent:P} of portfolio).";

@@ -12,7 +12,7 @@ public class PortfolioRepository : IPortfolioRepository
     public async Task<Portfolio?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         return await _context.Portfolios
-            .Include(p => p.Positions)
+            .Include(p => p.OpenPositions)
             .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 

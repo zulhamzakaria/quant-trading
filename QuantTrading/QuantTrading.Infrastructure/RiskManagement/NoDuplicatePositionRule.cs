@@ -8,7 +8,7 @@ public sealed class NoDuplicatePositionRule : IRiskRule
 {
     public bool Allows(Signal signal, Portfolio portfolio, out string rejection)
     {
-        if (portfolio.Positions.Any(p => p.Symbol == signal.Symbol))
+        if (portfolio.OpenPositions.Any(p => p.Symbol == signal.Symbol))
         {
             rejection = $"Duplicate position for symbol {signal.Symbol} is not allowed.";
             return false;
