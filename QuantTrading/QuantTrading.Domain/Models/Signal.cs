@@ -9,6 +9,7 @@ public sealed record Signal
     public decimal Confidence { get; }
     public DateTimeOffset Timestamp { get; }
     public string StrategyName { get; }
+    public decimal TargetValue { get; set; }
 
     public Signal(
         string symbol,

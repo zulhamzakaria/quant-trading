@@ -8,10 +8,10 @@ public sealed class SufficientCashRule : IRiskRule
 {
     public bool Allows(Signal signal, Portfolio portfolio, out string rejection)
     {
-        decimal requiredCash = signal.Quantity * signal.Price;
-        if (portfolio.Cash < requiredCash)
+        decimal requiredCash = signal.TargetValue;
+        if (portfolio.CashBalance < requiredCash)
         {
-            rejection = $"Insufficient cash. Required: {requiredCash}, Available: {portfolio.Cash}.";
+            rejection = $"Insufficient cash. Required: {requiredCash}, Available: {portfolio.CashBalance}.";
             return false;
         }
 
