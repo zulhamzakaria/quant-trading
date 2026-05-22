@@ -1,4 +1,5 @@
 ﻿using QuantTrading.Domain.Common;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuantTrading.Domain.Entities;
 
@@ -7,16 +8,31 @@ public sealed class Portfolio
     public Guid Id { get; private set; }
     public decimal CashBalance { get; private set; }
 
-    private readonly Dictionary<string, Position> _openPositions = new(StringComparer.OrdinalIgnoreCase);
-    public IReadOnlyCollection<Position> OpenPositions => _openPositions.Values.ToList().AsReadOnly();
+    private readonly List<Position> _positions = new();
+    public IReadOnlyCollection<Position> Positions => _positions.AsReadOnly();
 
-    private readonly List<Position> _historyLog = new();
-    public IReadOnlyCollection<Position> HistoryLog => _historyLog.AsReadOnly();
+    [NotMapped]
+    public IReadOnlyCollection<Position> OpenPositions => _positions
+        .Where(p => p.IsOpen)
+        .ToList()
+        .AsReadOnly();
 
+    public Portfolio() { }
+
+    public bool HasOpenPositionForSymbol(string symbol)
+    {
+        return OpenPositions.Any(p => p.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void OpenNewPosition(Position position)
+    {
+        _positions.Add(position);
+        CashBalance -= position.CostBasis;
+    }
     public decimal CalculateTotalEquity(IReadOnlyDictionary<string, decimal> currentPrices)
     {
         decimal positionsValue = 0m;
-        foreach (var position in _openPositions.Values)
+        foreach (var position in _positions)
         {
             if (!currentPrices.TryGetValue(position.Symbol, out var currentPrice))
             {
@@ -26,8 +42,6 @@ public sealed class Portfolio
         }
         return CashBalance + positionsValue;
     }
-
-    public Portfolio() { }
 
     public static Result<Portfolio> Create(decimal initialBalance)
     {
@@ -52,21 +66,16 @@ public sealed class Portfolio
         return Result.Success();
     }
 
-    public bool HasPositionForSymbol(string symbol)
-        => _openPositions.ContainsKey(symbol);
-
-    public void OnPositionOpened(Position position)
-    {
-        _openPositions[position.Symbol] = position;
-        _historyLog.Add(position);
-        CashBalance -= position.AverageEntryPrice;
-    }
-
     public void OnPositionClosed(string symbol, decimal exitPrice)
     {
-        if (_openPositions.Remove(symbol, out var position))
+        // Find the active open position for this ticker
+        var position = _positions
+            .FirstOrDefault(p => p.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase) && p.IsOpen);
+
+        if (position != null)
         {
             CashBalance += position.Quantity * exitPrice;
+            position.ClosePosition();
         }
     }
 
