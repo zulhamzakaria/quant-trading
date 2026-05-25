@@ -28,7 +28,9 @@ public sealed record Currency
     public static readonly Currency BTC = new("BTC");
     public static readonly Currency ETH = new("ETH");
 
-    public static explicit operator string(Currency currency) => currency.Code;
-
+    public static explicit operator string(Currency currency) 
+        => currency.Code;
     public override string ToString() => Code;
+    public static Currency FromString(string code) 
+        => new Currency(code);
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using QuantTrading.Domain.Entities;
 using QuantTrading.Domain.Models;
+using QuantTrading.Domain.ValueObjects;
 
 namespace QuantTrading.Infrastructure;
 
@@ -43,7 +44,10 @@ public sealed class AppDbContext : DbContext
                 .HasPrecision(18, 4);
                 cm.Property(p => p.Currency)
                 .HasColumnName("InitialCapitalCurrency")
-                .HasMaxLength(3);
+                .HasMaxLength(3)
+                .HasConversion(
+                    c => c.ToString(),
+                    s => Currency.FromString(s));
             });
             entity.OwnsOne(e => e.FinalCapital, cm =>
             {
