@@ -31,10 +31,8 @@ public sealed record BacktestResult
     //public IReadOnlyList<Trade> Trades { get; }
     public IReadOnlyList<EquityCurvePoint> EquityCurve { get; }
 
-    //private BacktestResult()
-    //{
-        
-    //}
+    private BacktestResult() { }
+    
 
     public decimal TotalReturn =>
         InitialCapital.Amount > 0
