@@ -56,7 +56,10 @@ public sealed class AppDbContext : DbContext
                 .HasPrecision(18, 4);
                 cm.Property(p => p.Currency)
                 .HasColumnName("FinalCapitalCurrency")
-                .HasMaxLength(3);
+                .HasMaxLength(3)
+                .HasConversion(
+                    c => c.ToString(),
+                    s => Currency.FromString(s));
             });
             entity.OwnsOne(e => e.GrossProfit, cm =>
             {
@@ -65,7 +68,10 @@ public sealed class AppDbContext : DbContext
                 .HasPrecision(18, 4);
                 cm.Property(p => p.Currency)
                 .HasColumnName("GrossProfitCurrency")
-                .HasMaxLength(3);
+                .HasMaxLength(3)
+                .HasConversion(
+                    c => c.ToString(),
+                    s => Currency.FromString(s));
             });
             entity.OwnsOne(e => e.GrossLoss, cm =>
             {
@@ -74,7 +80,10 @@ public sealed class AppDbContext : DbContext
                 .HasPrecision(18, 4);
                 cm.Property(p => p.Currency)
                 .HasColumnName("GrossLossCurrency")
-                .HasMaxLength(3);
+                .HasMaxLength(3)
+                .HasConversion(
+                    c => c.ToString(),
+                    s => Currency.FromString(s));
             });
             //entity.OwnsMany(e => e.EquityCurve, builder => { builder.ToJson(); });
         });
