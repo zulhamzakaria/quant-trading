@@ -4,7 +4,7 @@ namespace QuantTrading.Domain.Models;
 
 public sealed record BacktestResult
 {
-    public Guid Id { get; } = Guid.NewGuid();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public string StrategyName { get; }
     public DateTime StartDate { get; }
     public DateTime EndDate { get; }
@@ -30,6 +30,11 @@ public sealed record BacktestResult
 
     //public IReadOnlyList<Trade> Trades { get; }
     public IReadOnlyList<EquityCurvePoint> EquityCurve { get; }
+
+    //private BacktestResult()
+    //{
+        
+    //}
 
     public decimal TotalReturn =>
         InitialCapital.Amount > 0
