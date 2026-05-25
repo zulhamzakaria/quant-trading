@@ -1,22 +1,18 @@
-﻿using QuantTrading.Domain.Entities;
-using QuantTrading.Domain.ValueObjects;
+﻿using QuantTrading.Domain.ValueObjects;
 
 namespace QuantTrading.Domain.Models;
 
 public sealed record BacktestResult
 {
+    public Guid Id { get; } = Guid.NewGuid();
     public string StrategyName { get; }
-
     public DateTime StartDate { get; }
-
     public DateTime EndDate { get; }
 
     public Money InitialCapital { get; }
-
     public Money FinalCapital { get; }
 
     public int TotalTrades { get; }
-
     public int WinningTrades { get; }
 
     /// <summary>
@@ -24,14 +20,16 @@ public sealed record BacktestResult
     /// Represented as a decimal percentage (e.g. 0.25 = 25%).
     /// </summary>
     public decimal MaxDrawdown { get; }
-
     /// <summary>
     /// Risk-adjusted return metric.
     /// Higher is generally better.
     /// </summary>
     public decimal SharpeRatio { get; }
+    public Money GrossProfit { get; }
+    public Money GrossLoss { get; }
 
-    public IReadOnlyList<Trade> Trades { get; }
+    //public IReadOnlyList<Trade> Trades { get; }
+    public IReadOnlyList<EquityCurvePoint> EquityCurve { get; }
 
     public decimal TotalReturn =>
         InitialCapital.Amount > 0
@@ -44,6 +42,11 @@ public sealed record BacktestResult
             ? (decimal)WinningTrades / TotalTrades
             : 0;
 
+    public decimal ProfitFactor =>
+        GrossLoss.Amount > 0 
+        ? GrossProfit.Amount / GrossLoss.Amount 
+        : GrossProfit.Amount;
+
     public BacktestResult(
         string strategyName,
         DateTime startDate,
@@ -54,7 +57,9 @@ public sealed record BacktestResult
         int winningTrades,
         decimal maxDrawdown,
         decimal sharpeRatio,
-        IEnumerable<Trade>? trades = null)
+        Money grossProfit,
+        Money grossLoss,
+        IEnumerable<EquityCurvePoint>? equityCurve = null)
     {
         strategyName = strategyName?.Trim();
 
@@ -74,7 +79,15 @@ public sealed record BacktestResult
         if (finalCapital is null)
             throw new ArgumentNullException(nameof(finalCapital));
 
-        if (initialCapital.Currency != finalCapital.Currency)
+        if (grossProfit is null)
+            throw new ArgumentNullException(nameof(grossProfit));
+
+        if (grossLoss is null)
+            throw new ArgumentNullException(nameof(grossLoss));
+
+        if (initialCapital.Currency != finalCapital.Currency ||
+            initialCapital.Currency != grossProfit.Currency ||
+            initialCapital.Currency != grossLoss.Currency)
             throw new InvalidOperationException(
                 "Initial and final capital currencies must match.");
 
@@ -102,8 +115,12 @@ public sealed record BacktestResult
         WinningTrades = winningTrades;
         MaxDrawdown = maxDrawdown;
         SharpeRatio = sharpeRatio;
+        GrossProfit = grossProfit;
+        GrossLoss = grossLoss;
 
-        Trades = trades?.ToList().AsReadOnly()
-            ?? new List<Trade>().AsReadOnly();
+        EquityCurve = equityCurve?.ToList().AsReadOnly()
+            ?? new List<EquityCurvePoint>().AsReadOnly();
     }
 }
+
+public sealed record EquityCurvePoint(DateTime Timestamp, Money Value);
