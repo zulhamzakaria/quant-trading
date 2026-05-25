@@ -1,4 +1,5 @@
 ﻿using QuantTrading.Domain.ValueObjects;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuantTrading.Domain.Models;
 
@@ -29,6 +30,7 @@ public sealed record BacktestResult
     public Money GrossLoss { get; }
 
     //public IReadOnlyList<Trade> Trades { get; }
+    [NotMapped]
     public IReadOnlyList<EquityCurvePoint> EquityCurve { get; }
 
     private BacktestResult() { }

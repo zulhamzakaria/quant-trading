@@ -72,7 +72,7 @@ public sealed class AppDbContext : DbContext
                 .HasColumnName("GrossLossCurrency")
                 .HasMaxLength(3);
             });
-            entity.OwnsMany(e => e.EquityCurve, builder => { builder.ToJson(); });
+            //entity.OwnsMany(e => e.EquityCurve, builder => { builder.ToJson(); });
         });
     }
 }
