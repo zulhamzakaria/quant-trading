@@ -1,12 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using QuantTrading.Simulation.Contracts;
 
-namespace QuantTrading.Simulation.Models
+namespace QuantTrading.Simulation.Models;
+
+public sealed record AccountStateSnapshot(
+    decimal Cash,
+    string Currency,
+    IReadOnlyDictionary<string, int> ActivePositions
+    ) : IReadonlyAccountState
 {
-    internal class AccountStateSnapshot
-    {
-    }
+
+    public int GetPositionSize(string symbol)
+        => ActivePositions.TryGetValue(symbol, out int qty) ? qty : 0;
+
+    public bool HasPositionOpen(string symbol)
+        => ActivePositions.TryGetValue(symbol, out int qty) && qty > 0;
 }

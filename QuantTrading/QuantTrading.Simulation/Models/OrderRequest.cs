@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using QuantTrading.Simulation.Shared;
 
-namespace QuantTrading.Simulation.Models
-{
-    internal class OrderRequest
-    {
-    }
-}
+namespace QuantTrading.Simulation.Models;
+
+public sealed record OrderRequest(
+    string Symbol,
+    OrderType Type,
+    OrderAction Action,
+    int Quantity,
+    decimal? LimitPrice = null);
