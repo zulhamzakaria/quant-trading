@@ -127,5 +127,3 @@ public sealed record BacktestResult
             ?? new List<EquityCurvePoint>().AsReadOnly();
     }
 }
-
-public sealed record EquityCurvePoint(DateTime Timestamp, Money Value);

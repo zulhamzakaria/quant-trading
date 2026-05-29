@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using QuantTrading.Application.Models;
+using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Contracts;
 
-internal interface IStrategy
+public interface IStrategy
 {
+    string Name { get; }
+    OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState);
 }

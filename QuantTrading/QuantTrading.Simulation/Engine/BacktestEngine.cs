@@ -1,12 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using QuantTrading.Application.Models;
+using QuantTrading.Domain.Models;
+using QuantTrading.Domain.ValueObjects;
+using QuantTrading.Simulation.Contracts;
 
-namespace QuantTrading.Simulation.Engine
+namespace QuantTrading.Simulation.Engine;
+
+public sealed class BacktestEngine
 {
-    internal class BacktestEngine
+    public List<EquityCurvePoint> RunSimulation(
+        IStrategy strategy, IEnumerable<MarketData> marketData, Money initialCapital)
     {
+        Console.WriteLine($"[Engine] Initializing simulation loop for strategy: {strategy.Name}");
+
+
+
     }
 }
