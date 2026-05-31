@@ -1,5 +1,4 @@
-﻿using QuantTrading.Domain.Models;
-using QuantTrading.Domain.ValueObjects;
+﻿using QuantTrading.Domain.ValueObjects;
 using QuantTrading.Simulation.Contracts;
 using QuantTrading.Simulation.Models;
 using QuantTrading.Simulation.Shared;
@@ -9,7 +8,7 @@ namespace QuantTrading.Simulation.Execution;
 public sealed class SimulatedBroker
 {
     private readonly string _currencyCode;
-    private readonly List<TradeRecord> _executedTrades = new();
+    private readonly List<ExecutionFill> _fillHistory = new();
     private readonly Dictionary<string, int> _activePositions = new();
     private readonly Dictionary<string, decimal> _latestPrices = new();
 
@@ -67,23 +66,22 @@ public sealed class SimulatedBroker
             _activePositions[order.Symbol] = sharesOwned - order.Quantity;
         }
 
-        var trade = new TradeRecord(
+        var fillReceipt = new ExecutionFill(
             Guid.NewGuid(),
             order.Symbol,
-            order.Action.ToString(),
+            order.Action,
             currentPrice,
             order.Quantity,
             timestamp);
 
-        _executedTrades.Add(trade);
+        _fillHistory.Add(fillReceipt);
         return new ExecutionResult(
             true,
             string.Empty,
-            trade
-            );
+            fillReceipt);
     }
 
-    public decimal CalculateTotalPortfoolioValue()
+    public decimal CalculateTotalPortfolioValue()
     {
         decimal positionValue = 0;
         foreach(var kvp in _activePositions)
@@ -100,5 +98,5 @@ public sealed class SimulatedBroker
         return new AccountStateSnapshot(CashBalance, _currencyCode, isolatedPositionsSnapshot);
     }
 
-    public IReadOnlyCollection<TradeRecord> GetExecutedTrades() => _executedTrades.AsReadOnly();
+    public IReadOnlyCollection<ExecutionFill> GetExecutedTrades() => _fillHistory.AsReadOnly();
 }
