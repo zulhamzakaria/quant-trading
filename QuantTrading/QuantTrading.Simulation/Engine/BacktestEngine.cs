@@ -1,5 +1,4 @@
 ﻿using QuantTrading.Application.Models;
-using QuantTrading.Domain.Common;
 using QuantTrading.Domain.Models;
 using QuantTrading.Domain.ValueObjects;
 using QuantTrading.Simulation.Contracts;
