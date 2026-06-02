@@ -66,8 +66,7 @@ public sealed class SimulatedBroker
             _activePositions[order.Symbol] = sharesOwned - order.Quantity;
         }
 
-        var fillReceipt = new ExecutionFill(
-            Guid.NewGuid(),
+        var fillReceipt = new FillReceipt(
             order.Symbol,
             order.Action,
             currentPrice,
@@ -84,7 +83,7 @@ public sealed class SimulatedBroker
     public decimal CalculateTotalPortfolioValue()
     {
         decimal positionValue = 0;
-        foreach(var kvp in _activePositions)
+        foreach (var kvp in _activePositions)
         {
             decimal lastPrice = _latestPrices.GetValueOrDefault(kvp.Key);
             positionValue += kvp.Value * lastPrice;
@@ -98,5 +97,5 @@ public sealed class SimulatedBroker
         return new AccountStateSnapshot(CashBalance, _currencyCode, isolatedPositionsSnapshot);
     }
 
-    public IReadOnlyCollection<FillReceipt> GetExecutedTrades() => _fillHistory.AsReadOnly();
+    public IReadOnlyCollection<FillReceipt> GetHistory() => _fillHistory.AsReadOnly();
 }
