@@ -8,7 +8,7 @@ namespace QuantTrading.Simulation.Execution;
 public sealed class SimulatedBroker
 {
     private readonly string _currencyCode;
-    private readonly List<ExecutionFill> _fillHistory = new();
+    private readonly List<FillReceipt> _fillHistory = new();
     private readonly Dictionary<string, int> _activePositions = new();
     private readonly Dictionary<string, decimal> _latestPrices = new();
 
@@ -98,5 +98,5 @@ public sealed class SimulatedBroker
         return new AccountStateSnapshot(CashBalance, _currencyCode, isolatedPositionsSnapshot);
     }
 
-    public IReadOnlyCollection<ExecutionFill> GetExecutedTrades() => _fillHistory.AsReadOnly();
+    public IReadOnlyCollection<FillReceipt> GetExecutedTrades() => _fillHistory.AsReadOnly();
 }

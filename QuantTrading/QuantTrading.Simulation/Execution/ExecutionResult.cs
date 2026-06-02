@@ -3,4 +3,4 @@
 namespace QuantTrading.Simulation.Execution;
 
 public sealed record ExecutionResult(
-    bool IsSuccess, string RejectionReason, ExecutionFill? FilledTrade);
+    bool IsSuccess, string RejectionReason, FillReceipt? FilledTrade);

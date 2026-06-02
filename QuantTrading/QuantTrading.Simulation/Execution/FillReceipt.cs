@@ -2,8 +2,7 @@
 
 namespace QuantTrading.Simulation.Execution;
 
-public sealed record ExecutionFill(
-    Guid Id,
+public sealed record FillReceipt(
     string Symbol,
     OrderAction Action,
     decimal Price,
