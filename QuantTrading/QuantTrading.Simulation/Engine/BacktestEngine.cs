@@ -9,7 +9,7 @@ namespace QuantTrading.Simulation.Engine;
 
 public sealed class BacktestEngine
 {
-    public List<EquityCurvePoint> RunSimulation(
+    public BacktestRunResult RunSimulation(
         IStrategy strategy, IEnumerable<MarketData> historicalData, Money initialCapital)
     {
         Console.WriteLine($"[Engine] Initializing simulation loop for strategy: {strategy.Name}");
@@ -41,6 +41,12 @@ public sealed class BacktestEngine
             equityCurve.Add(new EquityCurvePoint(bar.Timestamp, new Money(currentEquity, initialCapital.Currency)));
         }
         Console.WriteLine($"[Engine] Backtest run complete. Final Net Wealth: {broker.CalculateTotalPortfolioValue()}");
-        return equityCurve;
+        return new BacktestRunResult(
+            StrategyName: strategy.Name,
+            InitialCapital: initialCapital,
+            FinalPortfolioValue: new Money(broker.CalculateTotalPortfolioValue(), initialCapital.Currency),
+            EquityCurve: equityCurve.AsReadOnly(),
+            Fills: broker.GetHistory()
+        );
     }
 }
