@@ -47,9 +47,9 @@ using IServiceScope scope = host.Services.CreateScope();
 // 1. Arrange: Create exactly 3 mock chronological data bars for AAPL
 var mockHistoricalData = new List<MarketData>
 {
-    new MarketData("AAPL", new DateTime(2026, 1, 1), 99m,  102m, 98m,  100m, 1500000m),
-    new MarketData("AAPL", new DateTime(2026, 1, 2), 101m, 112m, 100m, 110m, 2000000m),
-    new MarketData("AAPL", new DateTime(2026, 1, 3), 109m, 110m, 94m,  95m,  1800000m)
+    new MarketData(Symbol:"AAPL", Timestamp: new DateTime(2026, 1, 1), Open: 99m, High: 102m, Low: 98m, Close: 100m, Volume: 1500000m),
+    new MarketData(Symbol:"AAPL", Timestamp: new DateTime(2026, 1, 2), Open: 101m, High: 112m, Low: 100m, Close: 110m, Volume: 2000000m),
+    new MarketData(Symbol:"AAPL", Timestamp: new DateTime(2026, 1, 3), Open: 109m, High: 110m, Low: 94m, Close: 95m, Volume: 1800000m)
 };
 
 // 2. Arrange: Initialize components with $10,000 USD initial capital
