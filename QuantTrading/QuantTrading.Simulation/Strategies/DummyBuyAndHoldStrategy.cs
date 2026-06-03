@@ -11,9 +11,9 @@ public sealed class DummyBuyAndHoldStrategy : IStrategy
 
     public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)
     {
-        Console.WriteLine($"[Strategy] No open position detected for {data.Symbol}. Generating BUY order intent.");
         if (!accountState.HasPositionOpen(data.Symbol))
         {
+            Console.WriteLine($"[Strategy] {data.Symbol} Position Size = {accountState.GetPositionSize(data.Symbol)}");
             return new OrderRequest(
                  data.Symbol,
                  OrderType.Market,
