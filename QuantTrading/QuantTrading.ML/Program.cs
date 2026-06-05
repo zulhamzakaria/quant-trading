@@ -66,6 +66,7 @@ Console.WriteLine($"Strategy:        {result.StrategyName}");
 Console.WriteLine($"Timeline:        {result.EquityCurve.First().Timestamp:yyyy-MM-dd} to {result.EquityCurve.Last().Timestamp:yyyy-MM-dd}");
 Console.WriteLine($"Initial Capital: {result.InitialCapital.Amount} {result.InitialCapital.Currency}");
 Console.WriteLine($"Final Capital:   {result.FinalPortfolioValue.Amount} {result.FinalPortfolioValue.Currency}");
+Console.WriteLine($"Total Return Percentage:   {result.TotalReturnPercentage}%");
 Console.WriteLine($"Total Fills:     {result.Fills.Count}");
 
 Console.WriteLine("\n--- Historical Equity Curve Checkpoint ---");
