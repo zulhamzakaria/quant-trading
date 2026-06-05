@@ -10,4 +10,8 @@
     <ProjectReference Include="..\QuantTrading.Domain\QuantTrading.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
 </Project>

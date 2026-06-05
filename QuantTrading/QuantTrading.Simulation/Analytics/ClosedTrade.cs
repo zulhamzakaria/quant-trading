@@ -1,4 +1,4 @@
-﻿namespace QuantTrading.Application.Models;
+﻿namespace QuantTrading.Simulation.Analytics;
 
 public sealed record ClosedTrade(
     string Symbol,
@@ -8,6 +8,6 @@ public sealed record ClosedTrade(
     decimal RealizedPnL,
     DateTime EntryTime,
     DateTime ExitTime)
-{
-    public bool IsWin => RealizedPnL > 0;
-}
+    {
+        public bool IsWin => RealizedPnL > 0;
+    }
