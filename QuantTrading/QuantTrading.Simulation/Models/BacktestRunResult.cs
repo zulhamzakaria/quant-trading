@@ -1,7 +1,6 @@
 ﻿using QuantTrading.Domain.Models;
 using QuantTrading.Domain.ValueObjects;
 using QuantTrading.Simulation.Execution;
-using QuantTrading.Simulation.Shared;
 
 namespace QuantTrading.Simulation.Models;
 
