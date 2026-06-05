@@ -86,7 +86,7 @@ public sealed class RSIStrategy : ISignalStrategy
         return EvaluateSignal(data, _runningGainsSum, _runningLossesSum);
     }
 
-    private Signal EvaluateSignal(IMarketData data, decimal avgGain, decimal avgLoss)
+    private Signal EvaluateSignal(MarketData data, decimal avgGain, decimal avgLoss)
     {
         // No losses means vertical pump — RSI is 100, extremely overbought
         if (avgLoss == 0)

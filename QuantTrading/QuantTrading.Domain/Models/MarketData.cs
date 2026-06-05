@@ -1,6 +1,4 @@
-﻿using QuantTrading.Application.Interfaces;
-
-namespace QuantTrading.Application.Models;
+﻿namespace QuantTrading.Domain.Models;
 
 public sealed record MarketData(
     string Symbol,
@@ -9,4 +7,4 @@ public sealed record MarketData(
     decimal High,
     decimal Low,
     decimal Close,
-    decimal Volume) :IMarketData;
+    decimal Volume);

@@ -1,4 +1,4 @@
-﻿using QuantTrading.Application.Models;
+﻿using QuantTrading.Domain.Models;
 using QuantTrading.Simulation.Contracts;
 using QuantTrading.Simulation.Models;
 using QuantTrading.Simulation.Shared;

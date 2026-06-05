@@ -1,4 +1,4 @@
-﻿using QuantTrading.Application.Models;
+﻿using QuantTrading.Domain.Models;
 using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Contracts;

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using QuantTrading.Application.Models;
 using QuantTrading.Domain.Models;
 using QuantTrading.Domain.ValueObjects;
 using QuantTrading.Infrastructure;
