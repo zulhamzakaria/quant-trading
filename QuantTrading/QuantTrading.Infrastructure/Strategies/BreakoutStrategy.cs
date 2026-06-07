@@ -1,5 +1,4 @@
 ﻿using QuantTrading.Application.Interfaces;
-using QuantTrading.Application.Models;
 using QuantTrading.Domain.Models;
 
 namespace QuantTrading.Infrastructure.Strategies;
