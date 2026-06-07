@@ -75,7 +75,7 @@ var csvPath = builder.Configuration["TrainingDataPath"]
     ?? throw new InvalidOperationException(
         "TrainingDataPath is not configured.");
 
-var parser = new LocalCsvParser();
-var marketData = parser.ParseFile(csvPath);
+//var parser = new LocalCsvParser();
+//var marketData = parser.ParseFile(csvPath);
 
-Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
+//Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");

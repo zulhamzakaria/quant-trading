@@ -22,4 +22,10 @@
     <ProjectReference Include="..\QuantTrading.Simulation\QuantTrading.Simulation.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="aapl.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
