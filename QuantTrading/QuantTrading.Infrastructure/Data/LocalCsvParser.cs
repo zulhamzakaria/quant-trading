@@ -30,7 +30,7 @@ public sealed class LocalCsvParser
             string[] tokens = line.Split(';');
             if (tokens.Length < 6) continue;
 
-            if (!DateTime.TryParseExact(tokens[0], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) continue;
+            if (!DateTime.TryParseExact(tokens[0], "d-M-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) continue;
             if (!decimal.TryParse(tokens[1], CultureInfo.InvariantCulture, out var open)) continue;
             if (!decimal.TryParse(tokens[2], CultureInfo.InvariantCulture, out var high)) continue;
             if (!decimal.TryParse(tokens[3], CultureInfo.InvariantCulture, out var low)) continue;
