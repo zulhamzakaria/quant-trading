@@ -2,13 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using QuantTrading.Domain.Models;
-using QuantTrading.Domain.ValueObjects;
 using QuantTrading.Infrastructure;
 using QuantTrading.Infrastructure.Data;
-using QuantTrading.Simulation.Engine;
-using QuantTrading.Simulation.Models;
-using QuantTrading.Simulation.Strategies;
 
 var builder = Host.CreateApplicationBuilder(args);
 
