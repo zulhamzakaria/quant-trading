@@ -79,4 +79,11 @@ var csvPath = builder.Configuration["TrainingDataPath"]
 var parser = new LocalCsvParser();
 var marketData = parser.ParseFile(csvPath);
 
-Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
+if (marketData.Count == 0)
+{
+    Console.WriteLine($"No valid market data found in {csvPath}. Please check the file format and contents.");
+}
+else
+{
+    Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
+}
