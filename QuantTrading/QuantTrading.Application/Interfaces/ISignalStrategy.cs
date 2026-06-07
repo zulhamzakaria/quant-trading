@@ -1,5 +1,4 @@
-﻿using QuantTrading.Application.Models;
-using QuantTrading.Domain.Models;
+﻿using QuantTrading.Domain.Models;
 
 namespace QuantTrading.Application.Interfaces;
 
