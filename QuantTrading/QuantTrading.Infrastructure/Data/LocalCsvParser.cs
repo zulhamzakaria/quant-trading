@@ -26,7 +26,6 @@ public sealed class LocalCsvParser
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            // stooq uses semicolons as delimiters, so split on ';'
             string[] tokens = line.Split(',');
             if (tokens.Length < 6) continue;
 
