@@ -63,3 +63,4 @@ nunit-*.xml
 # Settings files
 appsettings.Production.json
 appsettings.Development.json
+/aapl_us_d.csv
