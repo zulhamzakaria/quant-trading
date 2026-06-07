@@ -27,10 +27,10 @@ public sealed class LocalCsvParser
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             // stooq uses semicolons as delimiters, so split on ';'
-            string[] tokens = line.Split(';');
+            string[] tokens = line.Split(',');
             if (tokens.Length < 6) continue;
 
-            if (!DateTime.TryParseExact(tokens[0], "d-M-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) continue;
+            if (!DateTime.TryParseExact(tokens[0], "dd-MM-yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) continue;
             if (!decimal.TryParse(tokens[1], CultureInfo.InvariantCulture, out var open)) continue;
             if (!decimal.TryParse(tokens[2], CultureInfo.InvariantCulture, out var high)) continue;
             if (!decimal.TryParse(tokens[3], CultureInfo.InvariantCulture, out var low)) continue;

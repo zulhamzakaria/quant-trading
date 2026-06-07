@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using QuantTrading.Infrastructure;
+using QuantTrading.Infrastructure.Data;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -71,22 +72,11 @@ using IServiceScope scope = host.Services.CreateScope();
 //Console.WriteLine("==========================================");
 
 
-// Where is it looking?
-Console.WriteLine($"ContentRoot: {builder.Environment.ContentRootPath}");
-Console.WriteLine($"Environment: {builder.Environment.EnvironmentName}");
+var csvPath = builder.Configuration["TrainingDataPath"]
+    ?? throw new InvalidOperationException(
+        "TrainingDataPath is not configured.");
 
-// List what JSON files were actually loaded
-var configRoot = (IConfigurationRoot)builder.Configuration;
-foreach (var provider in configRoot.Providers)
-{
-    Console.WriteLine($"Loaded: {provider}");
-}
+var parser = new LocalCsvParser();
+var marketData = parser.ParseFile(csvPath);
 
-//var csvPath = builder.Configuration["TrainingDataPath"]
-//    ?? throw new InvalidOperationException(
-//        "TrainingDataPath is not configured.");
-
-//var parser = new LocalCsvParser();
-//var marketData = parser.ParseFile(csvPath);
-
-//Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
+Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
