@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using QuantTrading.Infrastructure;
 using QuantTrading.Infrastructure.Data;
+using QuantTrading.ML.Features;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -35,3 +36,13 @@ else
 }
 
 // Checkpoint 2: Feature engineering and data preprocessing (placeholder for actual implementation)
+FeatureGenerator featureGenerator = new();
+var calculatedFeatures = featureGenerator.ComputeFeatures(marketData);
+Console.WriteLine($"[SUCCESS] Transformed raw matrices into {calculatedFeatures.Count} feature rows!");
+
+if (calculatedFeatures.Count > 0)
+{
+    var sample = calculatedFeatures[0];
+    Console.WriteLine($"Sample Row [Date: {sample.Timestamp:dd-MM-yyyy}] -> Return1D: " +
+        $"{sample.Return1D:F4}, Sma20Ratio: {sample.Sma20Ratio:F4}, VolumeRatio: {sample.VolumeRatio:F4}");
+}
