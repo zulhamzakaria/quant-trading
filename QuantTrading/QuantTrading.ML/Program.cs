@@ -21,6 +21,7 @@ var csvPath = builder.Configuration["TrainingDataPath"]
     ?? throw new InvalidOperationException(
         "TrainingDataPath is not configured.");
 
+// Checkpoint 1: Load and parse historical market data from CSV file
 var parser = new LocalCsvParser();
 var marketData = parser.ParseFile(csvPath);
 
@@ -32,3 +33,5 @@ else
 {
     Console.WriteLine($"Loaded {marketData.Count} bars of historical data for {marketData.First().Symbol} from {csvPath}.");
 }
+
+// Checkpoint 2: Feature engineering and data preprocessing (placeholder for actual implementation)
