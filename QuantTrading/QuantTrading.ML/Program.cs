@@ -37,12 +37,31 @@ else
 
 // Checkpoint 2: Feature engineering and data preprocessing (placeholder for actual implementation)
 FeatureGenerator featureGenerator = new();
-var calculatedFeatures = featureGenerator.ComputeFeatures(marketData);
-Console.WriteLine($"[SUCCESS] Transformed raw matrices into {calculatedFeatures.Count} feature rows!");
+var trainingData = featureGenerator.ComputeFeatures(marketData);
+Console.WriteLine($"[SUCCESS] Transformed raw matrices into {trainingData.Count} feature rows!");
 
-if (calculatedFeatures.Count > 0)
+if (trainingData.Count > 0)
 {
-    var sample = calculatedFeatures[0];
+    var sample = trainingData[0];
     Console.WriteLine($"Sample Row [Date: {sample.Timestamp:dd-MM-yyyy}] -> Return1D: " +
         $"{sample.Return1D:F4}, Sma20Ratio: {sample.Sma20Ratio:F4}, VolumeRatio: {sample.VolumeRatio:F4}");
+}
+
+// Checkpoint 3
+// 1. ChatGPT's Class Balance Check
+var upDays = trainingData.Count(x => x.IsTomorrowCloseHigher);
+var downDays = trainingData.Count - upDays;
+double upRatio = (double)upDays / trainingData.Count * 100;
+
+Console.WriteLine($"--- DATASET CLASS BALANCE ---");
+Console.WriteLine($"Total Rows: {trainingData.Count}");
+Console.WriteLine($"Up Days   (True) : {upDays} ({upRatio:F1}%)");
+Console.WriteLine($"Down Days (False): {downDays} ({(100 - upRatio):F1}%)");
+Console.WriteLine($"-----------------------------");
+
+if (trainingData.Count > 0)
+{
+    var sample = trainingData[0];
+    // Notice how we can still read sample.Timestamp if you keep it in the record!
+    Console.WriteLine($"Sample Row [Date: {sample.Timestamp:yyyy-MM-dd}] -> Return1D: {sample.Return1D:F4}, LABEL: {sample.IsTomorrowCloseHigher}");
 }
