@@ -8,10 +8,10 @@ public sealed class FeatureGenerator
     {
         List<TrainingRow> featureList = new();
 
-        if (bars.Count < 20)
+        if (bars.Count < 21)
             return featureList;
 
-        for (int i = 19; i < bars.Count; i++)
+        for (int i = 19; i < bars.Count - 1; i++)
         {
             var current = bars[i];
             var yesterday = bars[i - 1];
@@ -20,6 +20,7 @@ public sealed class FeatureGenerator
             // Calculate metrics in decimal to preserve precision
             decimal return1D = yesterday.Close != 0 ? (current.Close - yesterday.Close) / yesterday.Close : 0m;
             decimal return5D = fiveDaysAgo.Close != 0 ? (current.Close - fiveDaysAgo.Close) / fiveDaysAgo.Close : 0m;
+            var tomorrow = bars[i + 1];
 
             decimal sumClose5 = 0;
             decimal sumVolume5 = 0;
@@ -42,6 +43,8 @@ public sealed class FeatureGenerator
             decimal sma20Ratio = sma20 != 0 ? current.Close / sma20 : 1.0m;
             decimal volumeRatio = avgVol5 != 0 ? current.Volume / avgVol5 : 1.0m;
 
+            bool isTomorrowCloseHigher = tomorrow.Close > current.Close;
+
             // Cast to float only at the boundary record for ML.NET compatibility (decimal for calculation)
             featureList.Add(new TrainingRow(
                 Timestamp: current.Timestamp,
@@ -49,7 +52,8 @@ public sealed class FeatureGenerator
                 Return5D: (float)return5D,
                 Sma5Ratio: (float)sma5Ratio,
                 Sma20Ratio: (float)sma20Ratio,
-                VolumeRatio: (float)volumeRatio
+                VolumeRatio: (float)volumeRatio,
+                IsTomorrowCloseHigher: isTomorrowCloseHigher
             ));
         }
 
