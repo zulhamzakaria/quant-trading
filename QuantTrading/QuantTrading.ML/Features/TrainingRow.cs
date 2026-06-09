@@ -1,11 +1,12 @@
 ﻿namespace QuantTrading.ML.Features;
 
-public sealed record ModelFeatures(
+public sealed record TrainingRow(
     DateTime Timestamp,
     float Return1D,
     float Return5D,
     float Sma5Ratio,
     float Sma20Ratio,
-    float VolumeRatio
+    float VolumeRatio,
+    bool IsTomorrowCloseHigher
 );
 

@@ -4,9 +4,9 @@ namespace QuantTrading.ML.Features;
 
 public sealed class FeatureGenerator
 {
-    public IReadOnlyList<ModelFeatures> ComputeFeatures(IReadOnlyList<MarketData> bars)
+    public IReadOnlyList<TrainingRow> ComputeFeatures(IReadOnlyList<MarketData> bars)
     {
-        List<ModelFeatures> featureList = new();
+        List<TrainingRow> featureList = new();
 
         if (bars.Count < 20)
             return featureList;
@@ -43,7 +43,7 @@ public sealed class FeatureGenerator
             decimal volumeRatio = avgVol5 != 0 ? current.Volume / avgVol5 : 1.0m;
 
             // Cast to float only at the boundary record for ML.NET compatibility (decimal for calculation)
-            featureList.Add(new ModelFeatures(
+            featureList.Add(new TrainingRow(
                 Timestamp: current.Timestamp,
                 Return1D: (float)return1D,
                 Return5D: (float)return5D,
