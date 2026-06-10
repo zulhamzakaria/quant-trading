@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using QuantTrading.Infrastructure;
 using QuantTrading.Infrastructure.Data;
+using QuantTrading.ML.Engine;
 using QuantTrading.ML.Features;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -43,7 +44,7 @@ Console.WriteLine($"[SUCCESS] Transformed raw matrices into {trainingData.Count}
 if (trainingData.Count > 0)
 {
     var sample = trainingData[0];
-    Console.WriteLine($"Sample Row [Date: {sample.Timestamp:dd-MM-yyyy}] -> Return1D: " +
+    Console.WriteLine($"Sample Row Return1D: " +
         $"{sample.Return1D:F4}, Sma20Ratio: {sample.Sma20Ratio:F4}, VolumeRatio: {sample.VolumeRatio:F4}");
 }
 
@@ -63,5 +64,11 @@ if (trainingData.Count > 0)
 {
     var sample = trainingData[0];
     // Notice how we can still read sample.Timestamp if you keep it in the record!
-    Console.WriteLine($"Sample Row [Date: {sample.Timestamp:yyyy-MM-dd}] -> Return1D: {sample.Return1D:F4}, LABEL: {sample.IsTomorrowCloseHigher}");
+    Console.WriteLine($"Sample Row [Return1D: {sample.Return1D:F4}, LABEL: {sample.IsTomorrowCloseHigher}");
 }
+
+// Checkpoint 4: Train and evaluate the machine learning model
+var trainer = new ModelTrainer();
+trainer.TrainAndEvaluate(trainingData);
+Console.WriteLine("Pipeline execution complete. Press any key to exit.");
+Console.ReadKey();
