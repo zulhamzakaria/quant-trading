@@ -47,7 +47,7 @@ public sealed class FeatureGenerator
 
             // Cast to float only at the boundary record for ML.NET compatibility (decimal for calculation)
             featureList.Add(new TrainingRow(
-                Timestamp: current.Timestamp,
+                //Timestamp: current.Timestamp,
                 Return1D: (float)return1D,
                 Return5D: (float)return5D,
                 Sma5Ratio: (float)sma5Ratio,
