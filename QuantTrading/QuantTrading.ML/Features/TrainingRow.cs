@@ -1,7 +1,7 @@
 ﻿namespace QuantTrading.ML.Features;
 
 public sealed record TrainingRow(
-    DateTime Timestamp,
+    //DateTime Timestamp,
     float Return1D,
     float Return5D,
     float Sma5Ratio,
