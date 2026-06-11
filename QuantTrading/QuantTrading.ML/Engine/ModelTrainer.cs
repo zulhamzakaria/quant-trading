@@ -55,10 +55,14 @@ public sealed class ModelTrainer
             .LbfgsLogisticRegression(labelColumn, "Features")},
             {"Fast Tree (Gradient Boosted)", _mlContext
             .BinaryClassification.Trainers
-            .FastTree(labelColumn, "Features")},
+            .FastTree(labelColumn, "Features")
+            .Append(_mlContext.BinaryClassification.Calibrators
+            .Platt(labelColumn))},
             {"Fast Forest (Random Forest Ensemble)", _mlContext
             .BinaryClassification.Trainers
-            .FastForest(labelColumn, "Features") }
+            .FastForest(labelColumn, "Features")
+            .Append(_mlContext.BinaryClassification.Calibrators
+            .Platt(labelColumn))}
         };
 
         var leaderboard = new List<TournamentResult>();
@@ -115,7 +119,8 @@ public sealed class ModelTrainer
             foreach (var result in leaderboard.OrderByDescending(r => r.AUC))
             {
                 {
-                    Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}", result.Name, result.Accuracy, result.AUC, result.F1Score));
+                    Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}", 
+                        result.Name, result.Accuracy, result.AUC, result.F1Score));
                 }
                 Console.WriteLine("======================================================================");
 
