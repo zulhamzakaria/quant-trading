@@ -123,17 +123,17 @@ public sealed class ModelTrainer
                 Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}",
                     result.Name, result.Accuracy, result.AUC, result.F1Score));
             }
-            Console.WriteLine("======================================================================");
+        }
 
-            if (bestModel != null)
-            {
-                _mlContext.Model.Save(
-                    bestModel,
-                    trainDataView.Schema,
-                    _bestModelPath);
+        Console.WriteLine("======================================================================");
+        if (bestModel != null)
+        {
+            _mlContext.Model.Save(
+                bestModel,
+                trainDataView.Schema,
+                _bestModelPath);
 
-                Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
-            }
+            Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
         }
     }
 }
