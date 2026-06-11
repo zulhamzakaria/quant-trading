@@ -108,33 +108,32 @@ public sealed class ModelTrainer
                 Console.WriteLine($"[ERROR] Training {algo.Key} failed: {ex.Message}");
                 continue;
             }
+        }
 
-            Console.WriteLine("\n======================================================================");
-            Console.WriteLine("                    🏆 FINAL TOURNAMENT LEADERBOARD 🏆");
-            Console.WriteLine($" Naive Market Baseline Accuracy: {baselineAccuracy:P2}");
-            Console.WriteLine("======================================================================");
-            Console.WriteLine(string.Format("{0,-38} | {1,-9} | {2,-8} | {3,-7}", "Algorithm Model", "Accuracy", "AUC", "F1 Score"));
-            Console.WriteLine("----------------------------------------------------------------------");
+        Console.WriteLine("\n======================================================================");
+        Console.WriteLine("                    🏆 FINAL TOURNAMENT LEADERBOARD 🏆");
+        Console.WriteLine($" Naive Market Baseline Accuracy: {baselineAccuracy:P2}");
+        Console.WriteLine("======================================================================");
+        Console.WriteLine(string.Format("{0,-38} | {1,-9} | {2,-8} | {3,-7}", "Algorithm Model", "Accuracy", "AUC", "F1 Score"));
+        Console.WriteLine("----------------------------------------------------------------------");
 
-            foreach (var result in leaderboard.OrderByDescending(r => r.AUC))
+        foreach (var result in leaderboard.OrderByDescending(r => r.AUC))
+        {
             {
-                {
-                    Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}", 
-                        result.Name, result.Accuracy, result.AUC, result.F1Score));
-                }
-                Console.WriteLine("======================================================================");
-
-                if (bestModel != null)
-                {
-                    _mlContext.Model.Save(
-                        bestModel,
-                        trainDataView.Schema,
-                        _bestModelPath);
-
-                    Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
-                }
+                Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}",
+                    result.Name, result.Accuracy, result.AUC, result.F1Score));
             }
+            Console.WriteLine("======================================================================");
 
+            if (bestModel != null)
+            {
+                _mlContext.Model.Save(
+                    bestModel,
+                    trainDataView.Schema,
+                    _bestModelPath);
+
+                Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
+            }
         }
     }
 }
