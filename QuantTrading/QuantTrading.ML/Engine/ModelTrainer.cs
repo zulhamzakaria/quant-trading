@@ -40,7 +40,8 @@ public sealed class ModelTrainer
             nameof(TrainingRow.Return5D),
             nameof(TrainingRow.Sma5Ratio),
             nameof(TrainingRow.Sma20Ratio),
-            nameof(TrainingRow.VolumeRatio));
+            nameof(TrainingRow.VolumeRatio),
+            nameof(TrainingRow.Rsi14));
 
         string labelColumn =
             nameof(TrainingRow.IsTomorrowCloseHigher);
