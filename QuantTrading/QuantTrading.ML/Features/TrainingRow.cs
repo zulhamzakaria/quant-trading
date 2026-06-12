@@ -8,6 +8,7 @@ public sealed record TrainingRow(
     float Sma20Ratio,
     float VolumeRatio,
     float Rsi14,
+    float BollingerWidth20,
     bool IsTomorrowCloseHigher
 );
 
