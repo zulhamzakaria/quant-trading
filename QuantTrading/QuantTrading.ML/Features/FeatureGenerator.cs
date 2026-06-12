@@ -90,14 +90,29 @@ public sealed class FeatureGenerator
 
             // default to 50 (center mark) for no-price movement
             decimal rsi14 = 50m;
-            if(avgLoss > 0)
+            if (avgLoss > 0)
             {
                 decimal rs = avgGain / avgLoss;
                 rsi14 = 100m - (100m / (1m + rs));
-            }else if(avgGain > 0)
+            }
+            else if (avgGain > 0)
             {
                 rsi14 = 100m; // maxed out RSI when there are gains but no losses
             }
+
+            //bollinger band implementation
+            decimal sumOfSquares20 = 0;
+            for(int j = 0; j<20; j++)
+            {
+                decimal deviation = bars[i - j].Close - sma20;
+                sumOfSquares20 += deviation * deviation;
+            }
+            decimal variance20 = sumOfSquares20 / 20m;
+            // standard deviation is the square root of variance
+            decimal stdDev20 = 
+                (decimal)Math.Sqrt((double)variance20);
+            decimal bollingerWidth20 =
+                sma20 > 0 ? (4m * stdDev20) / sma20 : 0m;
 
             bool isTomorrowCloseHigher = tomorrow.Close > current.Close;
 
@@ -110,6 +125,7 @@ public sealed class FeatureGenerator
                 Sma20Ratio: (float)sma20Ratio,
                 VolumeRatio: (float)volumeRatio,
                 Rsi14: (float)rsi14,
+                BollingerWidth20: (float)bollingerWidth20,
                 IsTomorrowCloseHigher: isTomorrowCloseHigher
             ));
         }
@@ -122,6 +138,9 @@ public sealed class FeatureGenerator
             Console.WriteLine($"RSI[14] Column Mean  : {featureList.Average(x => x.Rsi14):F2}");
             Console.WriteLine($"RSI[14] Column Max   : {featureList.Max(x => x.Rsi14):F2}");
             Console.WriteLine($"RSI[14] Column Min   : {featureList.Min(x => x.Rsi14):F2}");
+            Console.WriteLine($"BB_Width[20] Mean (%) : {featureList.Average(x => x.BollingerWidth20):P2}");
+            Console.WriteLine($"BB_Width[20] Max (%)  : {featureList.Max(x => x.BollingerWidth20):P2}");
+            Console.WriteLine($"BB_Width[20] Min (%)  : {featureList.Min(x => x.BollingerWidth20):P2}");
             Console.WriteLine("-------------------------------------\n");
         }
 
