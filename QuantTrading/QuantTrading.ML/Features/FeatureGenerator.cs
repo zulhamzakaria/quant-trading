@@ -50,6 +50,8 @@ public sealed class FeatureGenerator
                 = ((wilderAvgLoss[i - 1] * 13m) + currentLoss) / 14m;
         }
 
+        decimal[] atrSeries = ComputeWilderAtr14(bars);
+
         for (int i = 20; i < bars.Count - 1; i++)
         {
             var current = bars[i];
@@ -102,17 +104,24 @@ public sealed class FeatureGenerator
 
             //bollinger band implementation
             decimal sumOfSquares20 = 0;
-            for(int j = 0; j<20; j++)
+            for (int j = 0; j < 20; j++)
             {
                 decimal deviation = bars[i - j].Close - sma20;
                 sumOfSquares20 += deviation * deviation;
             }
             decimal variance20 = sumOfSquares20 / 20m;
             // standard deviation is the square root of variance
-            decimal stdDev20 = 
+            decimal stdDev20 =
                 (decimal)Math.Sqrt((double)variance20);
             decimal bollingerWidth20 =
                 sma20 > 0 ? (4m * stdDev20) / sma20 : 0m;
+
+            // Atr
+            decimal currentAtr = atrSeries[i];
+            decimal atrRatio14 = 
+                current.Close != 0 
+                ? currentAtr / current.Close : 0;
+            
 
             bool isTomorrowCloseHigher = tomorrow.Close > current.Close;
 
@@ -125,7 +134,8 @@ public sealed class FeatureGenerator
                 Sma20Ratio: (float)sma20Ratio,
                 VolumeRatio: (float)volumeRatio,
                 Rsi14: (float)rsi14,
-                BollingerWidth20: (float)bollingerWidth20,
+                AtrRatio14: (float)atrRatio14,
+                //BollingerWidth20: (float)bollingerWidth20,
                 IsTomorrowCloseHigher: isTomorrowCloseHigher
             ));
         }
@@ -138,13 +148,94 @@ public sealed class FeatureGenerator
             Console.WriteLine($"RSI[14] Column Mean  : {featureList.Average(x => x.Rsi14):F2}");
             Console.WriteLine($"RSI[14] Column Max   : {featureList.Max(x => x.Rsi14):F2}");
             Console.WriteLine($"RSI[14] Column Min   : {featureList.Min(x => x.Rsi14):F2}");
-            Console.WriteLine($"BB_Width[20] Mean (%) : {featureList.Average(x => x.BollingerWidth20):P2}");
-            Console.WriteLine($"BB_Width[20] Max (%)  : {featureList.Max(x => x.BollingerWidth20):P2}");
-            Console.WriteLine($"BB_Width[20] Min (%)  : {featureList.Min(x => x.BollingerWidth20):P2}");
+            //Console.WriteLine($"BB_Width[20] Mean (%) : {featureList.Average(x => x.BollingerWidth20):P2}");
+            //Console.WriteLine($"BB_Width[20] Max (%)  : {featureList.Max(x => x.BollingerWidth20):P2}");
+            //Console.WriteLine($"BB_Width[20] Min (%)  : {featureList.Min(x => x.BollingerWidth20):P2}");
+            Console.WriteLine($"ATR_Ratio[14] Mean (%) : {featureList.Average(x => x.AtrRatio14):P2}");
+            Console.WriteLine($"ATR_Ratio[14] Max (%)  : {featureList.Max(x => x.AtrRatio14):P2}");
+            Console.WriteLine($"ATR_Ratio[14] Min (%)  : {featureList.Min(x => x.AtrRatio14):P2}");
             Console.WriteLine("-------------------------------------\n");
         }
 
         return featureList;
 
     }
+
+    private decimal[] ComputeWilderAtr14(IReadOnlyList<MarketData> bars)
+    {
+        int count = bars.Count;
+        decimal[] trueRange = new decimal[count];
+        decimal[] atrArray = new decimal[count];
+
+        for (int i = 1; i < count; i++)
+        {
+            decimal h1 = bars[i].High - bars[i].Low;
+            decimal hpc =
+                Math.Abs(bars[i].High - bars[i - 1].Close);
+            decimal lpc =
+                Math.Abs(bars[i].Low - bars[i - 1].Close);
+            trueRange[i] = Math.Max(h1, Math.Max(hpc, lpc));
+        }
+
+        decimal seedAtr = 0;
+        for (int k = 1; k <= 14; k++)
+            seedAtr += trueRange[k];
+
+        atrArray[14] = seedAtr / 14m;
+
+        for(int i = 15; i < count; i++)
+        {
+            atrArray[i] = 
+                ((atrArray[i - 1] * 13m) + trueRange[i]) / 14m;
+        }
+
+        return atrArray;
+    }
+
+    private static decimal[] ComputeWilderRsi14(IReadOnlyList<MarketData> bars)
+    {
+        int count = bars.Count;
+        decimal[] rsiArray = new decimal[count];
+        decimal[] changes = new decimal[count];
+
+        for (int i = 1; i < count; i++)
+            changes[i] = bars[i].Close - bars[i - 1].Close;
+
+        decimal[] wilderAvgGain = new decimal[count];
+        decimal[] wilderAvgLoss = new decimal[count];
+
+        decimal seedGain = 0, seedLoss = 0;
+        for (int k = 1; k <= 14; k++)
+        {
+            if (changes[k] > 0) seedGain += changes[k];
+            else seedLoss += Math.Abs(changes[k]);
+        }
+        wilderAvgGain[14] = seedGain / 14m;
+        wilderAvgLoss[14] = seedLoss / 14m;
+
+        for (int i = 15; i < count; i++)
+        {
+            decimal gain = changes[i] > 0 ? changes[i] : 0m;
+            decimal loss = changes[i] < 0 ? Math.Abs(changes[i]) : 0m;
+
+            wilderAvgGain[i] = ((wilderAvgGain[i - 1] * 13m) + gain) / 14m;
+            wilderAvgLoss[i] = ((wilderAvgLoss[i - 1] * 13m) + loss) / 14m;
+        }
+
+        for (int i = 14; i < count; i++)
+        {
+            if (wilderAvgLoss[i] > 0)
+            {
+                decimal rs = wilderAvgGain[i] / wilderAvgLoss[i];
+                rsiArray[i] = 100m - (100m / (1m + rs));
+            }
+            else
+            {
+                rsiArray[i] = wilderAvgGain[i] > 0 ? 100m : 50m;
+            }
+        }
+
+        return rsiArray;
+    }
+
 }
