@@ -135,7 +135,6 @@ public sealed class FeatureGenerator
                 VolumeRatio: (float)volumeRatio,
                 Rsi14: (float)rsi14,
                 AtrRatio14: (float)atrRatio14,
-                //BollingerWidth20: (float)bollingerWidth20,
                 IsTomorrowCloseHigher: isTomorrowCloseHigher
             ));
         }
