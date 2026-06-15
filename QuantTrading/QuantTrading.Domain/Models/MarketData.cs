@@ -7,4 +7,4 @@ public sealed record MarketData(
     decimal High,
     decimal Low,
     decimal Close,
-    long Volume);
+    decimal Volume);

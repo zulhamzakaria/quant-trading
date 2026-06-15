@@ -34,7 +34,7 @@ public sealed class LocalCsvParser
             if (!decimal.TryParse(tokens[2], CultureInfo.InvariantCulture, out var high)) continue;
             if (!decimal.TryParse(tokens[3], CultureInfo.InvariantCulture, out var low)) continue;
             if (!decimal.TryParse(tokens[4], CultureInfo.InvariantCulture, out var close)) continue;
-            if (!long.TryParse(tokens[5], CultureInfo.InvariantCulture, out var volume)) continue;
+            if (!decimal.TryParse(tokens[5], CultureInfo.InvariantCulture, out var volume)) continue;
 
             bars.Add(new MarketData(
                 Symbol: symbol,
