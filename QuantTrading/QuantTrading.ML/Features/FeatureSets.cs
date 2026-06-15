@@ -23,3 +23,10 @@ public static class FeatureSets
         nameof(TrainingRow.Rsi14)
     };
 }
+
+
+public enum FeatureSetType
+{
+    Base,
+    Rsi
+}
