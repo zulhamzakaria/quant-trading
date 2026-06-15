@@ -15,7 +15,8 @@ public sealed class ModelTrainer
     public (double Auc, string ModelName) TrainTournament(
         string symbol,
         IReadOnlyCollection<TrainingRow> data,
-        string[] featureColumns)
+        string[] featureColumns,
+        string featureName)
     {
         if (data is null || data.Count == 0)
             throw new InvalidOperationException("No training data available.");
@@ -97,7 +98,7 @@ public sealed class ModelTrainer
        if (bestModel != null)
         {
             string _bestModelPath = 
-                $"{symbol}_{nameof(featureColumns)}_best_model.zip";
+                $"{symbol}_{featureName}_best_model.zip";
             _mlContext.Model.Save(
                 bestModel,
                 trainDataView.Schema,

@@ -63,13 +63,15 @@ public sealed class ResearchRunner
                 modelTrainer.TrainTournament(
                     symbol,
                     trainingData,
-                    FeatureSets.BaseFeatures);
+                    FeatureSets.BaseFeatures,
+                    "base");
 
             var rsiResult =
                 modelTrainer.TrainTournament(
                     symbol,
                     trainingData,
-                    FeatureSets.RsiFeatures);
+                    FeatureSets.RsiFeatures,
+                    "rsi");
 
             double alphaDelta = 
                 rsiResult.Auc - baseResult.Auc;
