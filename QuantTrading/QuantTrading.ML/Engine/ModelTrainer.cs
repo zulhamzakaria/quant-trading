@@ -14,7 +14,7 @@ public sealed class ModelTrainer
 
     public (double Auc, string ModelName) TrainTournament(
         string symbol,
-        List<TrainingRow> data,
+        IReadOnlyCollection<TrainingRow> data,
         string[] featureColumns)
     {
         if (data is null || data.Count == 0)

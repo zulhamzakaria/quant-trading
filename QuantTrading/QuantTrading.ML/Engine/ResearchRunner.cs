@@ -72,12 +72,12 @@ public sealed class ResearchRunner
                     FeatureSets.RsiFeatures);
 
             double alphaDelta = 
-                rsiResult.AUC - baseResult.AUC;
+                rsiResult.Auc - baseResult.Auc;
 
             researchLedger.Add(new ExperimentResult(
                 Symbol: symbol,
-                BaseAuc: baseResult.AUC,
-                RsiAuc: rsiResult.AUC,
+                BaseAuc: baseResult.Auc,
+                RsiAuc: rsiResult.Auc,
                 Delta: alphaDelta,
                 BaseWinner: baseResult.ModelName,
                 RsiWinner: rsiResult.ModelName));
