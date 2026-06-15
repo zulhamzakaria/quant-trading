@@ -7,22 +7,20 @@ namespace QuantTrading.ML.Engine;
 public sealed class ModelTrainer
 {
     private readonly MLContext _mlContext;
-    private readonly string _bestModelPath = "best_model.zip";
     public ModelTrainer()
     {
         _mlContext = new MLContext(seed: 42);
     }
 
-    public void TrainAndEvaluate(IReadOnlyList<TrainingRow> data)
+    public (double Auc, string ModelName) TrainTournament(
+        string symbol,
+        List<TrainingRow> data,
+        string[] featureColumns)
     {
         if (data is null || data.Count == 0)
             throw new InvalidOperationException("No training data available.");
 
         int totalRows = data.Count;
-        int historicalUpDays =
-            data.Count(x => x.IsTomorrowCloseHigher);
-        double baselineAccuracy =
-            (double)historicalUpDays / totalRows;
 
         // 8:2 split for training and testing
         int trainCount = (int)(totalRows * 0.8);
@@ -35,14 +33,7 @@ public sealed class ModelTrainer
             _mlContext.Data.LoadFromEnumerable(testRows);
 
         var featurePipeline = _mlContext.Transforms.Concatenate(
-            "Features",
-            nameof(TrainingRow.Return1D),
-            nameof(TrainingRow.Return5D),
-            nameof(TrainingRow.Sma5Ratio),
-            nameof(TrainingRow.Sma20Ratio),
-            nameof(TrainingRow.VolumeRatio),
-            nameof(TrainingRow.Rsi14),
-            nameof(TrainingRow.AtrRatio14));
+            "Features", featureColumns);
 
         string labelColumn =
             nameof(TrainingRow.IsTomorrowCloseHigher);
@@ -67,43 +58,34 @@ public sealed class ModelTrainer
             .Platt(labelColumn))}
         };
 
-        var leaderboard = new List<TournamentResult>();
-        ITransformer bestModel = null;
+        //var leaderboard = new List<TournamentResult>();
+        string winningModelName = "None";
+        ITransformer? bestModel = null;
         double highestAuc = 0.0;
-        var trainedArtifacts =
-            new Dictionary<string, (ITransformer Model, DataViewSchema Schema)>();
-
-        Console.WriteLine($"\n======================================================================");
-        Console.WriteLine($"🏆 STARTING THE MODEL TOURNAMENT ({algorithms.Count} Contenders) 🏆");
-        Console.WriteLine($"Chronological Training Rows: {trainRows.Count} | Testing Rows: {testRows.Count}");
-        Console.WriteLine($"======================================================================\n");
+        //var trainedArtifacts =
+        //    new Dictionary<string, (ITransformer Model, DataViewSchema Schema)>();
 
         foreach (var algo in algorithms)
         {
             try
             {
-                Console.WriteLine($"[TRAINING] Fitting {algo.Key}...");
                 var fullPipeline =
                     featurePipeline.Append(algo.Value);
                 ITransformer trainedModel =
                     fullPipeline.Fit(trainDataView);
 
-                IDataView predictions =
+                IDataView predictions = 
                     trainedModel.Transform(testDataView);
-                var metrics =
-                    _mlContext.BinaryClassification
-                    .Evaluate(predictions, labelColumn);
-                leaderboard.Add(new TournamentResult(
-                    algo.Key,
-                    metrics.Accuracy,
-                    metrics.AreaUnderRocCurve,
-                    metrics.F1Score));
+                var metrics = _mlContext.BinaryClassification
+                    .Evaluate(predictions, labelColumnName: labelColumn);
 
-                if (metrics.AreaUnderRocCurve > highestAuc)
+                if(metrics.AreaUnderRocCurve > highestAuc)
                 {
                     highestAuc = metrics.AreaUnderRocCurve;
+                    winningModelName = algo.Key;
                     bestModel = trainedModel;
                 }
+
             }
             catch (Exception ex)
             {
@@ -112,22 +94,10 @@ public sealed class ModelTrainer
             }
         }
 
-        Console.WriteLine("\n======================================================================");
-        Console.WriteLine("                    🏆 FINAL TOURNAMENT LEADERBOARD 🏆");
-        Console.WriteLine($" Naive Market Baseline Accuracy: {baselineAccuracy:P2}");
-        Console.WriteLine("======================================================================");
-        Console.WriteLine(string.Format("{0,-38} | {1,-9} | {2,-8} | {3,-7}", "Algorithm Model", "Accuracy", "AUC", "F1 Score"));
-        Console.WriteLine("----------------------------------------------------------------------");
-
-        foreach (var result in leaderboard.OrderByDescending(r => r.AUC))
+       if (bestModel != null)
         {
-            Console.WriteLine(string.Format("{0,-38} | {1,-9:P2} | {2,-8:F4} | {3,-7:F4}",
-                result.Name, result.Accuracy, result.AUC, result.F1Score));
-        }
-
-        Console.WriteLine("======================================================================");
-        if (bestModel != null)
-        {
+            string _bestModelPath = 
+                $"{symbol}_{nameof(featureColumns)}_best_model.zip";
             _mlContext.Model.Save(
                 bestModel,
                 trainDataView.Schema,
@@ -135,6 +105,9 @@ public sealed class ModelTrainer
 
             Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
         }
+
+        return (highestAuc, winningModelName);
+
     }
 }
 
