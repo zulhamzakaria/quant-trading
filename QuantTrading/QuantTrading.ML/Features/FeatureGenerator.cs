@@ -118,25 +118,25 @@ public sealed class FeatureGenerator
 
             // Atr
             decimal currentAtr = atrSeries[i];
-            decimal atrRatio14 = 
-                current.Close != 0 
+            decimal atrRatio14 =
+                current.Close != 0
                 ? currentAtr / current.Close : 0;
-            
+
 
             bool isTomorrowCloseHigher = tomorrow.Close > current.Close;
 
             // Cast to float only at the boundary record for ML.NET compatibility (decimal for calculation)
-            featureList.Add(new TrainingRow(
+            featureList.Add(new TrainingRow { 
                 //Timestamp: current.Timestamp,
-                Return1D: (float)return1D,
-                Return5D: (float)return5D,
-                Sma5Ratio: (float)sma5Ratio,
-                Sma20Ratio: (float)sma20Ratio,
-                VolumeRatio: (float)volumeRatio,
-                Rsi14: (float)rsi14,
-                AtrRatio14: (float)atrRatio14,
-                IsTomorrowCloseHigher: isTomorrowCloseHigher
-            ));
+                Return1D = (float)return1D,
+                Return5D = (float)return5D,
+                Sma5Ratio = (float)sma5Ratio,
+                Sma20Ratio = (float)sma20Ratio,
+                VolumeRatio = (float)volumeRatio,
+                Rsi14 = (float)rsi14,
+                AtrRatio14 = (float)atrRatio14,
+                IsTomorrowCloseHigher = isTomorrowCloseHigher
+            });
         }
 
         if (featureList.Count > 0)
@@ -182,9 +182,9 @@ public sealed class FeatureGenerator
 
         atrArray[14] = seedAtr / 14m;
 
-        for(int i = 15; i < count; i++)
+        for (int i = 15; i < count; i++)
         {
-            atrArray[i] = 
+            atrArray[i] =
                 ((atrArray[i - 1] * 13m) + trueRange[i]) / 14m;
         }
 
