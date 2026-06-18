@@ -1,240 +1,196 @@
-﻿using QuantTrading.Domain.Models;
+﻿using Microsoft.ML.Data;
+using QuantTrading.Domain.Models;
 
 namespace QuantTrading.ML.Features;
 
 public sealed class FeatureGenerator
 {
-    public IReadOnlyList<TrainingRow> ComputeFeatures(IReadOnlyList<MarketData> bars)
+
+    private const int MinBarRequired = 22;
+
+    public IReadOnlyList<TrainingRow> ComputeFeatures
+        (IReadOnlyList<MarketData> bars)
     {
         List<TrainingRow> featureList = new();
+        if (bars is null || bars.Count < MinBarRequired)
+            return featureList;
+
         int totalBars = bars.Count;
         if (totalBars < 22)
             return featureList;
 
-        decimal[] changes = new decimal[totalBars];
-        for (int i = 1; i < totalBars; i++)
+        for (int i = 20; i < bars.Count; i++)
         {
-            changes[i] = bars[i].Close - bars[i - 1].Close;
-        }
-
-        decimal[] wilderAvgGain = new decimal[totalBars];
-        decimal[] wilderAvgLoss = new decimal[totalBars];
-
-        decimal seedGain = 0;
-        decimal seedLoss = 0;
-
-        for (int k = 1; k <= 14; k++)
-        {
-            decimal change = changes[k];
-            if (change > 0)
-                seedGain += change;
-            else
-                seedLoss += Math.Abs(change);
-        }
-
-        wilderAvgGain[14] = seedGain / 14m;
-        wilderAvgLoss[14] = seedLoss / 14m;
-
-        for (int i = 15; i < totalBars; i++)
-        {
-            decimal currentChange = changes[i];
-            decimal currentGain =
-                currentChange > 0 ? currentChange : 0m;
-            decimal currentLoss =
-                currentChange < 0 ? Math.Abs(currentChange) : 0m;
-
-            // wilder formula: (prior * 13 + current) / 14
-            wilderAvgGain[i]
-                = ((wilderAvgGain[i - 1] * 13m) + currentGain) / 14m;
-            wilderAvgLoss[i]
-                = ((wilderAvgLoss[i - 1] * 13m) + currentLoss) / 14m;
-        }
-
-        decimal[] atrSeries = ComputeWilderAtr14(bars);
-
-        for (int i = 20; i < bars.Count - 1; i++)
-        {
-            var current = bars[i];
-            var yesterday = bars[i - 1];
-            var fiveDaysAgo = bars[i - 5];
             var tomorrow = bars[i + 1];
+            bool isTomorrowCloseHigher =
+                tomorrow.Close > bars[i].Close;
 
-            // Calculate metrics in decimal to preserve precision
-            decimal return1D =
-                yesterday.Close != 0 ? (current.Close - yesterday.Close) / yesterday.Close : 0m;
-            decimal return5D =
-                fiveDaysAgo.Close != 0 ? (current.Close - fiveDaysAgo.Close) / fiveDaysAgo.Close : 0m;
-
-            decimal sumClose5 = 0;
-            decimal sumVolume5 = 0;
-            for (int j = 0; j < 5; j++)
-            {
-                sumClose5 += bars[i - j].Close;
-                sumVolume5 += bars[i - j].Volume;
-            }
-            decimal sma5 = sumClose5 / 5;
-            decimal avgVol5 = sumVolume5 / 5;
-
-            decimal sumClose20 = 0;
-            for (int j = 0; j < 20; j++)
-            {
-                sumClose20 += bars[i - j].Close;
-            }
-            decimal sma20 = sumClose20 / 20;
-
-            decimal sma5Ratio = sma5 != 0 ? current.Close / sma5 : 1.0m;
-            decimal sma20Ratio = sma20 != 0 ? current.Close / sma20 : 1.0m;
-            decimal volumeRatio = avgVol5 != 0 ? current.Volume / avgVol5 : 1.0m;
-
-            // wilder RSI calculation
-            decimal avgGain = wilderAvgGain[i];
-            decimal avgLoss = wilderAvgLoss[i];
-
-            // default to 50 (center mark) for no-price movement
-            decimal rsi14 = 50m;
-            if (avgLoss > 0)
-            {
-                decimal rs = avgGain / avgLoss;
-                rsi14 = 100m - (100m / (1m + rs));
-            }
-            else if (avgGain > 0)
-            {
-                rsi14 = 100m; // maxed out RSI when there are gains but no losses
-            }
-
-            //bollinger band implementation
-            decimal sumOfSquares20 = 0;
-            for (int j = 0; j < 20; j++)
-            {
-                decimal deviation = bars[i - j].Close - sma20;
-                sumOfSquares20 += deviation * deviation;
-            }
-            decimal variance20 = sumOfSquares20 / 20m;
-            // standard deviation is the square root of variance
-            decimal stdDev20 =
-                (decimal)Math.Sqrt((double)variance20);
-            decimal bollingerWidth20 =
-                sma20 > 0 ? (4m * stdDev20) / sma20 : 0m;
-
-            // Atr
-            decimal currentAtr = atrSeries[i];
-            decimal atrRatio14 =
-                current.Close != 0
-                ? currentAtr / current.Close : 0;
-
-
-            bool isTomorrowCloseHigher = tomorrow.Close > current.Close;
-
-            // Cast to float only at the boundary record for ML.NET compatibility (decimal for calculation)
-            featureList.Add(new TrainingRow { 
-                //Timestamp: current.Timestamp,
-                Return1D = (float)return1D,
-                Return5D = (float)return5D,
-                Sma5Ratio = (float)sma5Ratio,
-                Sma20Ratio = (float)sma20Ratio,
-                VolumeRatio = (float)volumeRatio,
-                Rsi14 = (float)rsi14,
-                AtrRatio14 = (float)atrRatio14,
-                IsTomorrowCloseHigher = isTomorrowCloseHigher
-            });
-        }
-
-        if (featureList.Count > 0)
-        {
-            Console.WriteLine("\n📊 --- DATASET DIAGNOSTIC HARNESS ---");
-            Console.WriteLine($"Total Rows Generated : {featureList.Count}");
-            Console.WriteLine($"Market Up Days Count : {featureList.Count(x => x.IsTomorrowCloseHigher)} ({((double)featureList.Count(x => x.IsTomorrowCloseHigher) / featureList.Count):P2})");
-            Console.WriteLine($"RSI[14] Column Mean  : {featureList.Average(x => x.Rsi14):F2}");
-            Console.WriteLine($"RSI[14] Column Max   : {featureList.Max(x => x.Rsi14):F2}");
-            Console.WriteLine($"RSI[14] Column Min   : {featureList.Min(x => x.Rsi14):F2}");
-            //Console.WriteLine($"BB_Width[20] Mean (%) : {featureList.Average(x => x.BollingerWidth20):P2}");
-            //Console.WriteLine($"BB_Width[20] Max (%)  : {featureList.Max(x => x.BollingerWidth20):P2}");
-            //Console.WriteLine($"BB_Width[20] Min (%)  : {featureList.Min(x => x.BollingerWidth20):P2}");
-            Console.WriteLine($"ATR_Ratio[14] Mean (%) : {featureList.Average(x => x.AtrRatio14):P2}");
-            Console.WriteLine($"ATR_Ratio[14] Max (%)  : {featureList.Max(x => x.AtrRatio14):P2}");
-            Console.WriteLine($"ATR_Ratio[14] Min (%)  : {featureList.Min(x => x.AtrRatio14):P2}");
-            Console.WriteLine("-------------------------------------\n");
+            var row = CalculateRowAt
+                (bars, i, isTomorrowCloseHigher);
+            if (row is not null)
+                featureList.Add(row);
         }
 
         return featureList;
 
     }
 
-    private decimal[] ComputeWilderAtr14(IReadOnlyList<MarketData> bars)
+    public TrainingRow? ComputeLatestFeatures
+        (IReadOnlyList<MarketData> bars)
     {
-        int count = bars.Count;
-        decimal[] trueRange = new decimal[count];
-        decimal[] atrArray = new decimal[count];
-
-        for (int i = 1; i < count; i++)
-        {
-            decimal h1 = bars[i].High - bars[i].Low;
-            decimal hpc =
-                Math.Abs(bars[i].High - bars[i - 1].Close);
-            decimal lpc =
-                Math.Abs(bars[i].Low - bars[i - 1].Close);
-            trueRange[i] = Math.Max(h1, Math.Max(hpc, lpc));
-        }
-
-        decimal seedAtr = 0;
-        for (int k = 1; k <= 14; k++)
-            seedAtr += trueRange[k];
-
-        atrArray[14] = seedAtr / 14m;
-
-        for (int i = 15; i < count; i++)
-        {
-            atrArray[i] =
-                ((atrArray[i - 1] * 13m) + trueRange[i]) / 14m;
-        }
-
-        return atrArray;
+        if(bars is null || bars.Count < MinBarRequired)
+            return null;
+        return CalculateRowAt
+            (bars, bars.Count - 1, isTomorrowCloseHigher: false);
     }
 
-    private static decimal[] ComputeWilderRsi14(IReadOnlyList<MarketData> bars)
+    private TrainingRow? CalculateRowAt(
+        IReadOnlyList<MarketData> bars,
+        int index,
+        bool isTomorrowCloseHigher)
     {
-        int count = bars.Count;
-        decimal[] rsiArray = new decimal[count];
-        decimal[] changes = new decimal[count];
 
-        for (int i = 1; i < count; i++)
-            changes[i] = bars[i].Close - bars[i - 1].Close;
+        if (index < 20 || index >= bars.Count)
+            return null;
 
-        decimal[] wilderAvgGain = new decimal[count];
-        decimal[] wilderAvgLoss = new decimal[count];
+        var current = bars[index];
+        var yesterday = bars[index - 1];
+        var fiveDaysAgo = bars[index - 5];
 
-        decimal seedGain = 0, seedLoss = 0;
-        for (int k = 1; k <= 14; k++)
+        decimal return1D =
+            yesterday.Close != 0
+            ? (current.Close - yesterday.Close) / yesterday.Close
+            : 0m;
+        decimal return5D =
+            fiveDaysAgo.Close != 0
+            ? (current.Close - fiveDaysAgo.Close) / fiveDaysAgo.Close
+            : 0m;
+
+        // 5-day SMA
+        decimal sumClose5 = 0m;
+        decimal sumVolume5 = 0m;
+        for (int j = 0; j < 5; j++)
         {
-            if (changes[k] > 0) seedGain += changes[k];
-            else seedLoss += Math.Abs(changes[k]);
+            var b = bars[index - j];
+            sumClose5 += b.Close;
+            sumVolume5 += b.Volume;
         }
-        wilderAvgGain[14] = seedGain / 14m;
-        wilderAvgLoss[14] = seedLoss / 14m;
+        decimal sma5 = sumClose5 / 5m;
+        decimal avgVol5 = sumVolume5 / 5m;
 
-        for (int i = 15; i < count; i++)
+        // 20-day SMA
+        decimal sumClose20 = 0m;
+        for (int j = 0; j < 20; j++)
         {
-            decimal gain = changes[i] > 0 ? changes[i] : 0m;
-            decimal loss = changes[i] < 0 ? Math.Abs(changes[i]) : 0m;
-
-            wilderAvgGain[i] = ((wilderAvgGain[i - 1] * 13m) + gain) / 14m;
-            wilderAvgLoss[i] = ((wilderAvgLoss[i - 1] * 13m) + loss) / 14m;
+            sumClose20 += bars[index - j].Close;
         }
+        decimal sma20 = sumClose20 / 20m;
 
-        for (int i = 14; i < count; i++)
+        decimal sma5Ratio =
+            sma5 != 0 ? current.Close / sma5 : 1.0m;
+        decimal sma20Ratio =
+            sma20 != 0 ? current.Close / sma20 : 1.0m;
+        decimal volumeRatio =
+            avgVol5 != 0 ? current.Volume / avgVol5 : 1.0m;
+
+        decimal avgGain = 0m;
+        decimal avgLoss = 0m;
+
+        int startRsiIndex = index - 14;
+        if (startRsiIndex < 1)
+            startRsiIndex = 1;
+
+        for (int k = startRsiIndex;
+            k < startRsiIndex + 14 && k <= index;
+            k++)
         {
-            if (wilderAvgLoss[i] > 0)
-            {
-                decimal rs = wilderAvgGain[i] / wilderAvgLoss[i];
-                rsiArray[i] = 100m - (100m / (1m + rs));
-            }
+            decimal change = bars[k].Close - bars[k - 1].Close;
+            if (change > 0)
+                avgGain += change;
             else
-            {
-                rsiArray[i] = wilderAvgGain[i] > 0 ? 100m : 50m;
-            }
+                avgLoss += Math.Abs(change);
         }
 
-        return rsiArray;
+        avgGain /= 14m;
+        avgLoss /= 14m;
+
+        for (int m = startRsiIndex + 14;
+            m <= index;
+            m++)
+        {
+            decimal change =
+                bars[m].Close - bars[m - 1].Close;
+            decimal gain =
+                change > 0 ? change : 0m;
+            decimal loss =
+                change < 0 ? Math.Abs(change) : 0m;
+
+            avgGain = ((avgGain * 13m) + gain) / 14m;
+            avgLoss = ((avgLoss * 13m) + loss) / 14m;
+        }
+
+        decimal rsi14 = 50m;
+        if (avgLoss > 0)
+        {
+            decimal rs = avgGain / avgLoss;
+            rsi14 = 100m - (100m / (1m + rs));
+        }
+        else if (avgGain > 0)
+        {
+            rsi14 = 100m;
+        }
+
+        decimal avgAtr = 0m;
+        int startAtrIndex = index - 14;
+        if (startAtrIndex < 1)
+            startAtrIndex = 1;
+
+        for (int k = startAtrIndex;
+            k < startAtrIndex + 14 && k <= index;
+            k++)
+        {
+            avgAtr += CalculateTrueRange
+                (bars[k], bars[k - 1]);
+        }
+        avgAtr /= 14m;
+
+        for (int m = startAtrIndex + 14; m <= index; m++)
+        {
+            decimal tr =
+                CalculateTrueRange
+                (bars[m], bars[m - 1]);
+            avgAtr =
+                ((avgAtr * 13m) + tr) / 14m;
+        }
+
+        decimal atrRatio14 =
+            current.Close != 0
+            ? avgAtr / current.Close
+            : 0m;
+
+        return new TrainingRow
+        {
+            Return1D = (float)return1D,
+            Return5D = (float)return5D,
+            Sma5Ratio = (float)sma5Ratio,
+            Sma20Ratio = (float)sma20Ratio,
+            VolumeRatio = (float)volumeRatio,
+            Rsi14 = (float)rsi14,
+            AtrRatio14 = (float)atrRatio14,
+            IsTomorrowCloseHigher = isTomorrowCloseHigher
+        };
+    }
+
+    private decimal CalculateTrueRange
+        (MarketData current, MarketData prev)
+    {
+        decimal hL =
+            current.High - current.Low;
+        decimal hC = 
+            Math.Abs(current.High - prev.Close);
+        decimal lC =
+            Math.Abs(current.Low - prev.Close);
+        return Math.Max(hL, Math.Max(hC, lC));
     }
 
 }
