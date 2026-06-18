@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Simulation", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Infrastructure", "QuantTrading.Infrastructure\QuantTrading.Infrastructure.csproj", "{A47F149B-2737-5611-9149-AE3A335398D7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantTrading.Shared", "QuantTrading.Shared\QuantTrading.Shared.csproj", "{057E392A-90BB-4287-A0FF-90462434A696}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{A47F149B-2737-5611-9149-AE3A335398D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A47F149B-2737-5611-9149-AE3A335398D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A47F149B-2737-5611-9149-AE3A335398D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{057E392A-90BB-4287-A0FF-90462434A696}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{057E392A-90BB-4287-A0FF-90462434A696}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{057E392A-90BB-4287-A0FF-90462434A696}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{057E392A-90BB-4287-A0FF-90462434A696}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
