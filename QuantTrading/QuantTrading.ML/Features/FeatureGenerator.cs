@@ -1,5 +1,4 @@
-﻿using Microsoft.ML.Data;
-using QuantTrading.Domain.Models;
+﻿using QuantTrading.Domain.Models;
 
 namespace QuantTrading.ML.Features;
 
