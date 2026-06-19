@@ -1,5 +1,5 @@
-﻿using QuantTrading.Simulation.Execution;
-using QuantTrading.Simulation.Shared;
+﻿using QuantTrading.Shared.Execution;
+using QuantTrading.Simulation.Execution;
 
 namespace QuantTrading.Simulation.Analytics;
 

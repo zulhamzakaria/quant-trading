@@ -1,4 +1,4 @@
-﻿using QuantTrading.Simulation.Shared;
+﻿using QuantTrading.Shared.Execution;
 
 namespace QuantTrading.Simulation.Execution;
 

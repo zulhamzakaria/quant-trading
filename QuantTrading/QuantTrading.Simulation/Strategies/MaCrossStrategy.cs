@@ -1,7 +1,6 @@
-﻿using QuantTrading.Domain.Models;
-using QuantTrading.Simulation.Contracts;
-using QuantTrading.Simulation.Models;
-using QuantTrading.Simulation.Shared;
+﻿using QuantTrading.Shared.Contracts;
+using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Simulation.Strategies;
 

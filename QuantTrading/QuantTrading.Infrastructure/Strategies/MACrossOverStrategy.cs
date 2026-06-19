@@ -1,6 +1,7 @@
 ﻿using QuantTrading.Application.Interfaces;
 using QuantTrading.Domain.Common;
 using QuantTrading.Domain.Models;
+using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Infrastructure.Strategies;
 

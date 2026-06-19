@@ -1,6 +1,8 @@
 ﻿using QuantTrading.Domain.Models;
 using QuantTrading.Domain.ValueObjects;
-using QuantTrading.Simulation.Contracts;
+using QuantTrading.Shared.Contracts;
+using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Execution;
 using QuantTrading.Simulation.Models;
 

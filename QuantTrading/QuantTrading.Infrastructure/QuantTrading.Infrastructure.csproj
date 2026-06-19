@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\QuantTrading.Application\QuantTrading.Application.csproj" />
     <ProjectReference Include="..\QuantTrading.Domain\QuantTrading.Domain.csproj" />
+    <ProjectReference Include="..\QuantTrading.Shared\QuantTrading.Shared.csproj" />
   </ItemGroup>
 
 </Project>

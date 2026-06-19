@@ -1,4 +1,4 @@
-﻿using QuantTrading.Domain.Models;
+﻿using QuantTrading.Shared.Models;
 using System.Globalization;
 
 namespace QuantTrading.Infrastructure.Data;

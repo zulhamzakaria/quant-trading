@@ -1,6 +1,6 @@
 ﻿using QuantTrading.Infrastructure.Data;
-using QuantTrading.ML.Features;
 using QuantTrading.ML.Models;
+using QuantTrading.Shared.Features;
 
 namespace QuantTrading.ML.Engine;
 
