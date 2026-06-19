@@ -1,6 +1,6 @@
 ﻿using Microsoft.ML.Data;
 
-namespace QuantTrading.ML.Features;
+namespace QuantTrading.Shared.Models;
 
 public sealed class TrainingRow
 {

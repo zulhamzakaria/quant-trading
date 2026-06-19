@@ -7,7 +7,7 @@ namespace QuantTrading.Simulation.Strategies;
 
 public sealed class MlStrategy : IStrategy
 {
-    private readonly PredictionEngine<TrainingRow, ModelPrediction>
+    //private readonly PredictionEngine<TrainingRow, ModelPrediction>
     public string Name => throw new NotImplementedException();
 
     public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)

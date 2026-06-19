@@ -1,6 +1,5 @@
 ﻿using Microsoft.ML;
-using QuantTrading.ML.Features;
-using QuantTrading.ML.Models;
+using QuantTrading.Shared.Models;
 
 namespace QuantTrading.ML.Engine;
 

@@ -1,4 +1,6 @@
-﻿namespace QuantTrading.ML.Features;
+﻿using QuantTrading.Shared.Models;
+
+namespace QuantTrading.ML.Features;
 
 public static class FeatureSets
 {
