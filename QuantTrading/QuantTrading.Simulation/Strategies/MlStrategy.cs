@@ -19,7 +19,7 @@ public sealed class MlStrategy : IStrategy
     public string Name => "ml-directional-model";
 
     public MlStrategy(
-        string modelPath, 
+        string modelPath,
         decimal allocationPerTrade = 2000m,
         int maxHistoryBars = 100)
     {
@@ -34,7 +34,7 @@ public sealed class MlStrategy : IStrategy
 
         if (maxHistoryBars < 25)
             throw new ArgumentOutOfRangeException(
-                nameof(maxHistoryBars), 
+                nameof(maxHistoryBars),
                 "Historical lookback window must look back at least 25 bars.");
 
         _allocationPerTrade = allocationPerTrade;
@@ -58,8 +58,55 @@ public sealed class MlStrategy : IStrategy
 
     }
 
-    public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)
+    public OrderRequest? OnData
+        (MarketData data, IReadonlyAccountState accountState)
     {
-        throw new NotImplementedException();
+        if (data is null || data.Close <= 0)
+            return null;
+
+        _bars.Add(data);
+
+        if (_bars.Count > _maxHistoryBars)
+            _bars.RemoveAt(0);
+
+        TrainingRow? latestFeature =
+            _featureGenerator.ComputeLatestFeatures(_bars);
+
+        if (latestFeature is null)
+            return null;
+
+        ModelPrediction prediction;
+
+        try
+        {
+            prediction = _predictionEngine.Predict(latestFeature);
+        }
+        catch
+        {
+            return null;
+        }
+
+        bool hasPosition =
+            accountState.HasPositionOpen(data.Symbol);
+
+        if (prediction.PredictedLabel && !hasPosition)
+        {
+            int targetShares = (int)CalculatePositionSize(data.Close);
+            if (targetShares > 0)
+                return new OrderRequest(
+                    data.Symbol,
+                    OrderType.Market,
+                    OrderAction.Buy,
+                    targetShares);
+        }
+
+        return null;
+    }
+
+    private int CalculatePositionSize(decimal price)
+    {
+        if(price <= 0)
+            return 0;
+        return (int)Math.Floor(_allocationPerTrade / price);
     }
 }
