@@ -10,7 +10,7 @@ public sealed class MlStrategy : IStrategy
 {
     private readonly PredictionEngine<TrainingRow, ModelPrediction>
         _predictionEngine;
-    private readonly FeatureGenerator featureGenerator;
+    private readonly FeatureGenerator _featureGenerator;
     private readonly List<MarketData> _bars = new();
 
     private readonly decimal _allocationPerTrade;
@@ -31,6 +31,31 @@ public sealed class MlStrategy : IStrategy
             throw new FileNotFoundException(
                 "Target ML model binary file was not found",
                 modelPath);
+
+        if (maxHistoryBars < 25)
+            throw new ArgumentOutOfRangeException(
+                nameof(maxHistoryBars), 
+                "Historical lookback window must look back at least 25 bars.");
+
+        _allocationPerTrade = allocationPerTrade;
+        _maxHistoryBars = maxHistoryBars;
+
+        // Initialize ML.NET Context with set evaluation seeds
+        var mlContext = new MLContext(seed: 42);
+
+        ITransformer model;
+        try
+        {
+            model = mlContext.Model.Load(modelPath, out _);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to load or parse the ML model from path: {modelPath}", ex);
+        }
+
+        _predictionEngine = mlContext.Model.CreatePredictionEngine<TrainingRow, ModelPrediction>(model);
+        _featureGenerator = new FeatureGenerator();
+
     }
 
     public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)
