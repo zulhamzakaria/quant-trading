@@ -1,7 +1,7 @@
-﻿using QuantTrading.Domain.Models;
-using QuantTrading.Simulation.Models;
+﻿using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Models;
 
-namespace QuantTrading.Simulation.Contracts;
+namespace QuantTrading.Shared.Contracts;
 
 public interface IStrategy
 {

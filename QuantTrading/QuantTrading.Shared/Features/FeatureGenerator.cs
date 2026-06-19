@@ -1,7 +1,6 @@
-﻿using QuantTrading.Domain.Models;
-using QuantTrading.Shared.Models;
+﻿using QuantTrading.Shared.Models;
 
-namespace QuantTrading.ML.Features;
+namespace QuantTrading.Shared.Features;
 
 public sealed class FeatureGenerator
 {

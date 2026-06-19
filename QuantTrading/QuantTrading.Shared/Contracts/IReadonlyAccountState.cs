@@ -1,4 +1,4 @@
-﻿namespace QuantTrading.Simulation.Contracts;
+﻿namespace QuantTrading.Shared.Contracts;
 
 public interface IReadonlyAccountState
 {

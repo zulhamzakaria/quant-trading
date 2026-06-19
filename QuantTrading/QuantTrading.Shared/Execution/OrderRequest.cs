@@ -1,6 +1,4 @@
-﻿using QuantTrading.Simulation.Shared;
-
-namespace QuantTrading.Simulation.Models;
+﻿namespace QuantTrading.Shared.Execution;
 
 public sealed record OrderRequest(
     string Symbol,

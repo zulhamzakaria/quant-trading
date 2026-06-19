@@ -1,6 +1,6 @@
 ﻿using QuantTrading.Shared.Models;
 
-namespace QuantTrading.ML.Features;
+namespace QuantTrading.Shared.Features;
 
 public static class FeatureSets
 {

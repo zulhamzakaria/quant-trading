@@ -1,4 +1,4 @@
-﻿namespace QuantTrading.Domain.Models;
+﻿namespace QuantTrading.Shared.Models;
 
 public sealed record MarketData(
     string Symbol,
