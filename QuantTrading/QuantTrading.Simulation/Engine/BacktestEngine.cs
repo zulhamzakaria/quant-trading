@@ -38,7 +38,7 @@ public sealed class BacktestEngine
             new StrategyAccountState(startingCash, currency);
     }
 
-    public BacktestRunResult RunSimulation
+    public void RunSimulation 
         (IEnumerable<MarketData> historicalFeed)
     {
         if (historicalFeed is null)
@@ -48,13 +48,13 @@ public sealed class BacktestEngine
             throw new InvalidOperationException
                 ("Cannot run simulation. No strategies registered");
 
-        foreach(var bar in historicalFeed)
+        foreach (var bar in historicalFeed)
         {
             if (bar.Close <= 0)
                 continue;
             _latestPrices[bar.Symbol] = bar.Close;
 
-            for(int i = 0; i < _strategies.Count; i++)
+            for (int i = 0; i < _strategies.Count; i++)
             {
                 var strategy = _strategies[i];
                 var account = _strategyAccounts[strategy];
@@ -65,7 +65,7 @@ public sealed class BacktestEngine
                     request =
                         strategy.OnData(bar, account);
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     Console.WriteLine($"[STRATEGY CRASH] '{strategy.Name}' failed on {bar.Timestamp}: {ex.Message}");
                     continue;
@@ -84,16 +84,82 @@ public sealed class BacktestEngine
     }
 
     private void ExecuteOrder(
-        OrderRequest request, 
-        StrategyAccountState account, 
-        decimal executionPrice, 
+        OrderRequest request,
+        StrategyAccountState account,
+        decimal executionPrice,
         Dictionary<string, decimal> globalPrices)
     {
-        if (request.Shares <= 0 || executionPrice <= 0)
+        if (request.Quantity <= 0 || executionPrice <= 0)
             return;
 
         globalPrices[request.Symbol] = executionPrice;
 
-        decimal totalValue = request.
+        decimal totalValue = request.Quantity * executionPrice;
+
+        if (request.Action == OrderAction.Buy)
+        {
+            if (account.Cash >= totalValue)
+            {
+                account.DebitCash(totalValue);
+                account.UpdatePosition(
+                    request.Symbol,
+                    request.Quantity,
+                    isExit: false);
+            }
+        }
+        else if (request.Action == OrderAction.Sell)
+        {
+            if (account.HasPositionOpen(request.Symbol))
+            {
+                int heldShares =
+                    account.GetPositionSize(request.Symbol);
+                if (heldShares >= request.Quantity)
+                {
+                    account.CreditCash(totalValue);
+                    account.UpdatePosition(
+                        request.Symbol,
+                        request.Quantity,
+                        isExit: true);
+                }
+            }
+        }
     }
+
+    public decimal CalculateCurrentPortfolioValue
+        (IStrategy strategy)
+    {
+        if (strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+        if (!_strategyAccounts.TryGetValue(strategy, out var account))
+            throw new KeyNotFoundException
+                ("No active account state registry found for the provided strategy instance.");
+
+        decimal inventoryValue = 0m;
+
+        foreach(var kvp in account.ActivePositions)
+        {
+            string symbol = kvp.Key;
+            int shares = kvp.Value;
+
+            if(_latestPrices.TryGetValue(symbol, out decimal currentPrice))
+            {
+                inventoryValue += shares * currentPrice;
+            }
+        }
+        return account.Cash + inventoryValue;
+    }
+
+    public IReadonlyAccountState GetAccountState
+        (IStrategy strategy)
+    {
+        if(strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+
+        if (!_strategyAccounts.TryGetValue(strategy, out var state))
+            throw new KeyNotFoundException
+                ("No active account state registry found for the provided strategy instance.");
+
+        return state;
+    }
+
 }
