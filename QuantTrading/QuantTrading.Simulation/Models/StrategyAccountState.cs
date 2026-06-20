@@ -9,7 +9,6 @@ public sealed class StrategyAccountState : IReadonlyAccountState
         = new(StringComparer.OrdinalIgnoreCase);
 
     public decimal Cash { get; private set; }
-
     public string Currency { get; }
 
     public IReadOnlyDictionary<string, int> ActivePositions { get; }
