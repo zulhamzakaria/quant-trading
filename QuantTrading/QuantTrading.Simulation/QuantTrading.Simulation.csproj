@@ -16,8 +16,4 @@
     <ProjectReference Include="..\QuantTrading.Shared\QuantTrading.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Shared\" />
-  </ItemGroup>
-
 </Project>
