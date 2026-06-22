@@ -15,7 +15,9 @@ class Program
 {
     static void Main(string[] args)
     {
-        ResearchRunner runner = new();
-        runner.RunExperimentPipeline();
+        //ResearchRunner runner = new();
+        //runner.RunExperimentPipeline();
+        PlumbingSmokeTest smokeTest = new();
+        smokeTest.ExecuteVerificationPipeline();
     }
 }
