@@ -1,4 +1,6 @@
 ﻿using QuantTrading.ML.Engine;
+using QuantTrading.Simulation.Engine;
+using QuantTrading.Simulation.Strategies;
 
 //// Db service not being used
 
@@ -17,7 +19,10 @@ class Program
     {
         //ResearchRunner runner = new();
         //runner.RunExperimentPipeline();
-        PlumbingSmokeTest smokeTest = new();
-        smokeTest.ExecuteVerificationPipeline();
+        //PlumbingSmokeTest smokeTest = new();
+        //smokeTest.ExecuteVerificationPipeline();
+        MlSmokeTest mlSmokeTest = new();
+        mlSmokeTest.ExecuteVerificationPipeline();
+
     }
 }
