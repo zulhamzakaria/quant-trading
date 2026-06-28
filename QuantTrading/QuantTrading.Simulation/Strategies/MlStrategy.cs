@@ -112,7 +112,7 @@ public sealed class MlStrategy : IStrategy
             prediction = _predictionEngine
                 .Predict(latestFeature);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             if (_diagnosticMode)
                 Console.WriteLine
@@ -122,22 +122,85 @@ public sealed class MlStrategy : IStrategy
 
         _predictionsGenerated++;
 
+        if (prediction.PredictedLabel)
+            _truePredictions++;
+        else
+            _falsePredictions++;
 
         bool hasPosition =
             accountState.HasPositionOpen(data.Symbol);
+        string dateStr =
+            data.Timestamp.ToString("yyyy-MM-dd");
+
+        OrderRequest? order = null;
+        string decision;
+        string? reason = null;
 
         if (prediction.PredictedLabel && !hasPosition)
         {
-            int targetShares = (int)CalculatePositionSize(data.Close);
+            _buySignals++;
+            int targetShares =
+                (int)CalculatePositionSize(data.Close);
+
             if (targetShares > 0)
-                return new OrderRequest(
+            {
+                order = new OrderRequest(
                     data.Symbol,
                     OrderType.Market,
                     OrderAction.Buy,
                     targetShares);
+
+                _buyOrdersRequested++;
+                decision = "BUY";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        "Flat",
+                        accountState.Cash,
+                        decision,
+                        targetShares,
+                        reason: null);
+
+            }
+            else
+            {
+                _rejectedOrders++;
+                decision = "HOLD";
+                reason = "Position size calculated to zero";
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        "Flat",
+                        accountState.Cash,
+                        decision,
+                        quantity: null,
+                        reason);
+            }
+        }
+        else if (prediction.PredictedLabel && hasPosition)
+        {
+
         }
 
         return null;
+    }
+
+    private void PrintBarDecision(
+        string dateStr,
+        decimal close,
+        ModelPrediction prediction,
+        string position,
+        decimal cash,
+        string decision,
+        int? quantity,
+        string? reason)
+    {
+        throw new NotImplementedException();
     }
 
     private int CalculatePositionSize(decimal price)
