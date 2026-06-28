@@ -17,8 +17,8 @@ public sealed class MlSmokeTest
         // ==========================================
         // 2. SETUP STRATEGY + ENGINE
         // ==========================================
-        var strategy = new MlStrategy(
-            modelPath: "AAPL_Base_best_model.zip");
+        var strategy = new MlStrategy
+            (modelPath: "AAPL_Base_best_model.zip", diagnosticMode: true);
 
         var engine = new BacktestEngine();
 
@@ -44,10 +44,10 @@ public sealed class MlSmokeTest
         // ==========================================
         var finalState =
             engine.GetAccountState(strategy);
+        strategy.PrintDiagnosticSummary(finalState);
 
         decimal finalPortfolioValue =
-            engine.CalculateCurrentPortfolioValue(
-                strategy);
+            engine.CalculateCurrentPortfolioValue(strategy);
 
         Console.WriteLine();
         Console.WriteLine("--- Smoke Test Results ---");
@@ -79,22 +79,51 @@ public sealed class MlSmokeTest
     private static List<MarketData> GenerateHistoricalData()
     {
         var data = new List<MarketData>();
+        var rng = new Random(Seed: 42);
 
         decimal price = 100m;
 
-        for (int i = 0; i < 50; i++)
+        // Predefined movement pattern to ensure both up and down days
+        // without relying on Random alone — guarantees RSI exercises
+        // both gain and loss accumulators within the first 22 bars.
+        decimal[] movements =
+        [
+             0.80m, -0.40m,  1.20m, -0.60m,  0.50m,
+            -0.30m,  1.50m, -0.80m,  0.20m, -0.50m,
+             1.00m, -0.70m,  0.90m, -0.40m,  0.60m,
+            -0.20m,  0.75m, -0.55m,  1.10m, -0.35m,
+             0.45m, -0.65m,  0.85m, -0.45m,  0.55m
+        ];
+
+        for (int i = 0; i < 150; i++)
         {
-            price += 0.75m;
+            // Use predefined pattern for first 25 bars, random thereafter
+            decimal change = i < movements.Length
+                ? movements[i]
+                : Math.Round(
+                    (decimal)(rng.NextDouble() * 3.0 - 1.2),
+                    2);
+
+            price = Math.Max(price + change, 1m);
+
+            decimal open = price - Math.Round((decimal)(rng.NextDouble() * 0.5), 2);
+            decimal high = price + Math.Round((decimal)(rng.NextDouble() * 1.5 + 0.5), 2);
+            decimal low = price - Math.Round((decimal)(rng.NextDouble() * 1.5 + 0.5), 2);
+            decimal volume = 800_000m + (decimal)(rng.NextDouble() * 400_000);
+
+            // Enforce OHLC integrity
+            high = Math.Max(high, Math.Max(open, price));
+            low = Math.Min(low, Math.Min(open, price));
 
             data.Add(
                 new MarketData(
                     Symbol: "AAPL",
-                    Timestamp: DateTime.UtcNow.AddDays(-50 + i),
-                    Open: price - 0.50m,
-                    High: price + 1.00m,
-                    Low: price - 1.00m,
+                    Timestamp: DateTime.UtcNow.AddDays(-150 + i),
+                    Open: open,
+                    High: high,
+                    Low: low,
                     Close: price,
-                    Volume: 1_000_000m));
+                    Volume: volume));
         }
 
         return data;
