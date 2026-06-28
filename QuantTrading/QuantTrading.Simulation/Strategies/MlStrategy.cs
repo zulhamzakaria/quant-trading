@@ -290,7 +290,7 @@ public sealed class MlStrategy : IStrategy
     }
 
     private void PrintBarDecision(
-        string dateStr,
+        string date,
         decimal close,
         ModelPrediction prediction,
         string position,
