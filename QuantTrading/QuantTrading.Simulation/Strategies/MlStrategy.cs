@@ -3,7 +3,6 @@ using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuantTrading.Simulation.Strategies;
 
