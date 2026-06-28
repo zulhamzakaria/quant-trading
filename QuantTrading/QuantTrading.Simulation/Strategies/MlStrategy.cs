@@ -3,6 +3,7 @@ using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QuantTrading.Simulation.Strategies;
 
@@ -27,7 +28,7 @@ public sealed class MlStrategy : IStrategy
     private int _buyOrdersRequested;
     private int _sellSignals;
     private int _sellOrdersRequested;
-    private int _holdDescisions;
+    private int _holdDecisions;
     private int _rejectedOrders;
 
     private readonly List<(
@@ -184,10 +185,108 @@ public sealed class MlStrategy : IStrategy
         }
         else if (prediction.PredictedLabel && hasPosition)
         {
+            _holdDecisions++;
+            decision = "HOLD";
+            reason = "Already holding position";
+
+            if (_diagnosticMode)
+            {
+                int heldQuantity =
+                    accountState.GetPositionSize(data.Symbol);
+                PrintBarDecision(
+                    dateStr,
+                    data.Close,
+                    prediction, $"Long ({heldQuantity})",
+                    accountState.Cash,
+                    decision,
+                    quantity: null,
+                    reason);
+            }
+        }
+        else
+        {
+            _holdDecisions++;
+            decision = "HOLD";
+            reason = hasPosition ?
+                "No Sell logic implemented" :
+                "No position to exit";
+
+            if (_diagnosticMode)
+                PrintBarDecision(
+                    dateStr,
+                    data.Close,
+                    prediction,
+                    hasPosition ? $"Long ({accountState.GetPositionSize(data.Symbol)})" : "Flat",
+                    accountState.Cash,
+                    decision,
+                    quantity: null,
+                    reason);
 
         }
+        if (_diagnosticMode && _predictionTable.Count < PredictionTableLimit)
+        {
+            _predictionTable.Add((
+                _predictionsGenerated,
+                dateStr,
+                data.Close,
+                prediction.PredictedLabel,
+                prediction.Probability,
+                prediction.Score,
+                decision));
+        }
 
-        return null;
+        return order;
+    }
+
+    public void PrintDiagnosticSummary
+        (IReadonlyAccountState accountState)
+    {
+        if (!_diagnosticMode)
+            return;
+
+        Console.WriteLine();
+        Console.WriteLine("========== ML Strategy Diagnostics ==========");
+        Console.WriteLine();
+        Console.WriteLine($"Bars Processed           : {_barsProcessed}");
+        Console.WriteLine($"Warmup Bars              : {_warmupBars}");
+        Console.WriteLine();
+        Console.WriteLine($"Predictions Generated    : {_predictionsGenerated}");
+        Console.WriteLine();
+        Console.WriteLine($"True Predictions         : {_truePredictions}");
+        Console.WriteLine($"False Predictions        : {_falsePredictions}");
+        Console.WriteLine();
+        Console.WriteLine($"Buy Signals              : {_buySignals}");
+        Console.WriteLine($"Buy Orders Requested     : {_buyOrdersRequested}");
+        Console.WriteLine();
+        Console.WriteLine($"Sell Signals             : {_sellSignals}");
+        Console.WriteLine($"Sell Orders Requested    : {_sellOrdersRequested}");
+        Console.WriteLine();
+        Console.WriteLine($"Hold Decisions           : {_holdDecisions}");
+        Console.WriteLine($"Rejected Orders          : {_rejectedOrders}");
+        Console.WriteLine();
+        Console.WriteLine($"Final Cash               : {accountState.Cash:F2}");
+        // Note: Final Equity requires BacktestEngine.CalculateCurrentPortfolioValue(strategy).
+        // Call that separately after PrintDiagnosticSummary if equity reporting is needed.
+        Console.WriteLine();
+        Console.WriteLine("=============================================");
+
+        if (_predictionTable.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"First {_predictionTable.Count} Predictions");
+            Console.WriteLine();
+            Console.WriteLine($"{"#",-4} {"Date",-12} {"Close",-10} {"Prediction",-12} {"Probability",-13} {"Score",-10} {"Action"}");
+            Console.WriteLine(new string('-', 68));
+
+            foreach (var (index, date, close, label, probability, score, action) in _predictionTable)
+            {
+                string predLabel = label ? "Buy" : "Down";
+                Console.WriteLine(
+                    $"{index,-4} {date,-12} {close,-10:F2} {predLabel,-12} {probability,-13:F2} {score,-10:F2} {action}");
+            }
+
+            Console.WriteLine();
+        }
     }
 
     private void PrintBarDecision(
@@ -200,7 +299,28 @@ public sealed class MlStrategy : IStrategy
         int? quantity,
         string? reason)
     {
-        throw new NotImplementedException();
+        string predLabel = prediction.PredictedLabel ? "Buy (True)" : "Sell/Down (False)";
+
+        Console.WriteLine($"Date       : {date}");
+        Console.WriteLine($"Close      : {close:F2}");
+        Console.WriteLine();
+        Console.WriteLine($"Prediction : {predLabel}");
+        Console.WriteLine($"Probability: {prediction.Probability:F2}");
+        Console.WriteLine($"Score      : {prediction.Score:F2}");
+        Console.WriteLine();
+        Console.WriteLine($"Position   : {position}");
+        Console.WriteLine($"Cash       : {cash:F2}");
+        Console.WriteLine();
+        Console.WriteLine($"Decision   : {decision}");
+
+        if (quantity.HasValue)
+            Console.WriteLine($"Quantity   : {quantity.Value}");
+        if (reason is not null)
+            Console.WriteLine($"Reason     : {reason}");
+
+        Console.WriteLine();
+        Console.WriteLine("-------------------------");
+        Console.WriteLine();
     }
 
     private int CalculatePositionSize(decimal price)
