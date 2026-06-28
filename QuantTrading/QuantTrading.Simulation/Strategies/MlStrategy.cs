@@ -15,13 +15,34 @@ public sealed class MlStrategy : IStrategy
 
     private readonly decimal _allocationPerTrade;
     private readonly int _maxHistoryBars;
+    private readonly bool _diagnosticMode;
+
+    private int _barsProcessed, _warmupBars;
+    private bool _warmupComplete;
+
+    private int _predictionsGenerated, _truePredictions,
+        _falsePredictions;
+
+    private int _buySignals;
+    private int _buyOrdersRequested;
+    private int _sellSignals;
+    private int _sellOrdersRequested;
+    private int _holdDescisions;
+    private int _rejectedOrders;
+
+    private readonly List<(
+        int index, string date, decimal close,
+        bool label, float probability, float score,
+        string action)> _predictionTable = new();
+    private const int PredictionTableLimit = 20;
 
     public string Name => "ml-directional-model";
 
     public MlStrategy(
         string modelPath,
         decimal allocationPerTrade = 2000m,
-        int maxHistoryBars = 100)
+        int maxHistoryBars = 100,
+        bool diagnosticMode = false)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -31,7 +52,6 @@ public sealed class MlStrategy : IStrategy
             throw new FileNotFoundException(
                 "Target ML model binary file was not found",
                 modelPath);
-
         if (maxHistoryBars < 25)
             throw new ArgumentOutOfRangeException(
                 nameof(maxHistoryBars),
@@ -39,6 +59,7 @@ public sealed class MlStrategy : IStrategy
 
         _allocationPerTrade = allocationPerTrade;
         _maxHistoryBars = maxHistoryBars;
+        _diagnosticMode = diagnosticMode;
 
         // Initialize ML.NET Context with set evaluation seeds
         var mlContext = new MLContext(seed: 42);
@@ -53,7 +74,8 @@ public sealed class MlStrategy : IStrategy
             throw new InvalidOperationException($"Failed to load or parse the ML model from path: {modelPath}", ex);
         }
 
-        _predictionEngine = mlContext.Model.CreatePredictionEngine<TrainingRow, ModelPrediction>(model);
+        _predictionEngine = mlContext.Model
+            .CreatePredictionEngine<TrainingRow, ModelPrediction>(model);
         _featureGenerator = new FeatureGenerator();
 
     }
@@ -64,27 +86,42 @@ public sealed class MlStrategy : IStrategy
         if (data is null || data.Close <= 0)
             return null;
 
+        _barsProcessed++;
         _bars.Add(data);
 
         if (_bars.Count > _maxHistoryBars)
+        {
             _bars.RemoveAt(0);
+        }
 
         TrainingRow? latestFeature =
             _featureGenerator.ComputeLatestFeatures(_bars);
 
         if (latestFeature is null)
+        {
+            if (!_warmupComplete)
+                _warmupBars++;
             return null;
+        }
+
+        _warmupComplete = true;
 
         ModelPrediction prediction;
-
         try
         {
-            prediction = _predictionEngine.Predict(latestFeature);
+            prediction = _predictionEngine
+                .Predict(latestFeature);
         }
-        catch
+        catch(Exception ex)
         {
+            if (_diagnosticMode)
+                Console.WriteLine
+                    ($"[PREDICTION ERROR] Bar {_barsProcessed} ({data.Timestamp:yyyy-MM-dd}): {ex.Message}");
             return null;
         }
+
+        _predictionsGenerated++;
+
 
         bool hasPosition =
             accountState.HasPositionOpen(data.Symbol);
@@ -105,7 +142,7 @@ public sealed class MlStrategy : IStrategy
 
     private int CalculatePositionSize(decimal price)
     {
-        if(price <= 0)
+        if (price <= 0)
             return 0;
         return (int)Math.Floor(_allocationPerTrade / price);
     }
