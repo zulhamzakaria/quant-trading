@@ -17,8 +17,9 @@ public sealed class MlSmokeTest
         // ==========================================
         // 2. SETUP STRATEGY + ENGINE
         // ==========================================
-        var strategy = new MlStrategy
-            (modelPath: "AAPL_Base_best_model.zip", diagnosticMode: true);
+        var strategy = new MlStrategy(
+            modelPath: "AAPL_Base_best_model.zip", 
+            diagnosticMode: true);
 
         var engine = new BacktestEngine();
 
@@ -42,8 +43,7 @@ public sealed class MlSmokeTest
         // ==========================================
         // 4. REPORT RESULTS
         // ==========================================
-        var finalState =
-            engine.GetAccountState(strategy);
+        var finalState = engine.GetAccountState(strategy);
         strategy.PrintDiagnosticSummary(finalState);
 
         decimal finalPortfolioValue =
@@ -74,6 +74,13 @@ public sealed class MlSmokeTest
         Console.WriteLine();
         Console.WriteLine(
             "[SUCCESS] ML strategy executed without runtime failures.");
+
+        MlModelEvaluation evaluation = new();
+        evaluation.ExecuteEvaluationPipeline(
+            historicalData,
+            modelPath: "AAPL_Base_best_model.zip",
+            isSyntheticData: true);
+    
     }
 
     private static List<MarketData> GenerateHistoricalData()
