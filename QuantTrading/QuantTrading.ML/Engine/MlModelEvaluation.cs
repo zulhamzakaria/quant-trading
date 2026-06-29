@@ -73,7 +73,7 @@ public sealed class MlModelEvaluation
 
         List<MarketData> buffer = new(capacity: 100);
 
-        for (int i = 0; i < bars.Count; i++)
+        for (int i = 0; i < bars.Count -1; i++)
         {
             buffer.Add(bars[i]);
             if (buffer.Count > 100)
@@ -100,6 +100,7 @@ public sealed class MlModelEvaluation
             }
 
             // Ground truth: did tomorrow's close exceed today's close?
+            int lastIndex = i + 1;
             bool actuallyUp = bars[i+1].Close > bars[i].Close;
 
             if (actuallyUp)
