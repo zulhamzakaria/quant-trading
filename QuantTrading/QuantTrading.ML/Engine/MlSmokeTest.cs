@@ -94,7 +94,7 @@ public sealed class MlSmokeTest
         evaluation.ExecuteEvaluationPipeline(
             historicalData,
             modelPath: ModelPath,
-            isSyntheticData: true);
+            isSyntheticData: false);
     
     }
 
