@@ -1,4 +1,5 @@
 ﻿
+using QuantTrading.Infrastructure.Data;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Strategies;
@@ -7,18 +8,23 @@ namespace QuantTrading.ML.Engine;
 
 public sealed class MlSmokeTest
 {
+    private const string CsvPath = "AAPL.csv";
+    private const string ModelPath = "AAPL_Base_best_model.zip";
+
     public void ExecuteVerificationPipeline()
     {
         // ==========================================
         // 1. LOAD HISTORICAL TEST DATA
         // ==========================================
-        var historicalData = GenerateHistoricalData();
+        var parser = new LocalCsvParser();
+        var historicalData = parser.ParseFile(CsvPath);
+        //var historicalData = GenerateHistoricalData();
 
         // ==========================================
         // 2. SETUP STRATEGY + ENGINE
         // ==========================================
         var strategy = new MlStrategy(
-            modelPath: "AAPL_Base_best_model.zip", 
+            modelPath: ModelPath, 
             diagnosticMode: true);
 
         var engine = new BacktestEngine();
@@ -75,10 +81,19 @@ public sealed class MlSmokeTest
         Console.WriteLine(
             "[SUCCESS] ML strategy executed without runtime failures.");
 
+        // ==========================================
+        // 6. PHASE 2 — MODEL EVALUATION
+        // Tests model prediction quality directly,
+        // independent of MlStrategy and BacktestEngine.
+        // ==========================================
+        Console.WriteLine();
+        Console.WriteLine("==========================================");
+        Console.WriteLine();
+
         MlModelEvaluation evaluation = new();
         evaluation.ExecuteEvaluationPipeline(
             historicalData,
-            modelPath: "AAPL_Base_best_model.zip",
+            modelPath: ModelPath,
             isSyntheticData: true);
     
     }
