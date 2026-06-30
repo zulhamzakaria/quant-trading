@@ -56,6 +56,10 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentOutOfRangeException(
                 nameof(maxHistoryBars),
                 "Historical lookback window must look back at least 25 bars.");
+        if (allocationPerTrade <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(allocationPerTrade),
+                "Allocation per trade must be greater than zero.");
 
         _allocationPerTrade = allocationPerTrade;
         _maxHistoryBars = maxHistoryBars;
@@ -140,7 +144,7 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
             int targetShares =
-                (int)CalculatePositionSize(data.Close);
+                (int)CalculatePositionSize(data.Close, accountState.Cash);
 
             if (targetShares > 0)
             {
@@ -202,26 +206,71 @@ public sealed class MlStrategy : IStrategy
                     reason);
             }
         }
+        else if (!prediction.PredictedLabel && hasPosition)
+        {
+            _sellSignals++;
+            int heldQty =
+                accountState.GetPositionSize(data.Symbol);
+
+            if (heldQty > 0)
+            {
+                order = new OrderRequest(
+                    data.Symbol,
+                    OrderType.Market,
+                    OrderAction.Sell,
+                    heldQty);
+
+                _sellOrdersRequested++;
+                decision = "SELL";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        $"Long ({heldQty})",
+                        accountState.Cash,
+                        decision,
+                        quantity: heldQty,
+                        reason: null);
+            }
+            else
+            {
+                _holdDecisions++;
+                decision = "HOLD";
+                reason = "Position open but size reported as zero";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr, 
+                        data.Close, 
+                        prediction, 
+                        "Long (0)", 
+                        accountState.Cash, 
+                        decision, 
+                        quantity: null, 
+                        reason);
+            }
+        }
         else
         {
             _holdDecisions++;
             decision = "HOLD";
-            reason = hasPosition ?
-                "No Sell logic implemented" :
-                "No position to exit";
+            reason = "No position to exit";
 
             if (_diagnosticMode)
                 PrintBarDecision(
                     dateStr,
                     data.Close,
                     prediction,
-                    hasPosition ? $"Long ({accountState.GetPositionSize(data.Symbol)})" : "Flat",
+                    "Flat",
                     accountState.Cash,
                     decision,
                     quantity: null,
                     reason);
 
         }
+
         if (_diagnosticMode && _predictionTable.Count < PredictionTableLimit)
         {
             _predictionTable.Add((
@@ -322,10 +371,12 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine();
     }
 
-    private int CalculatePositionSize(decimal price)
+    private int CalculatePositionSize
+        (decimal price, decimal availableCash)
     {
         if (price <= 0)
             return 0;
-        return (int)Math.Floor(_allocationPerTrade / price);
+        decimal effectiveAllocation = Math.Min(availableCash, _allocationPerTrade);
+        return (int)Math.Floor(effectiveAllocation / price);
     }
 }
