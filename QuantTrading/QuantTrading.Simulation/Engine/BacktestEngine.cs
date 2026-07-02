@@ -51,7 +51,7 @@ public sealed class BacktestEngine
 
         foreach (var bar in historicalFeed)
         {
-            if (bar.Close <= 0)
+            if (bar.Open <= 0 || bar.Close <= 0)
             {
                 for (int i = 0; i < _strategies.Count; i++)
                 {
