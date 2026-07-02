@@ -13,6 +13,9 @@ public sealed class BacktestEngine
     private readonly Dictionary<string, decimal>
         _latestPrices = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<IStrategy, OrderRequest?>
+        _pendingOrders = new();
+
     public void RegisterStrategy(
         IStrategy strategy,
         decimal startingCash,
@@ -33,9 +36,10 @@ public sealed class BacktestEngine
         _strategies.Add(strategy);
         _strategyAccounts[strategy] =
             new StrategyAccountState(startingCash, currency);
+        _pendingOrders[strategy] = null;
     }
 
-    public void RunSimulation 
+    public void RunSimulation
         (IEnumerable<MarketData> historicalFeed)
     {
         if (historicalFeed is null)
@@ -48,7 +52,22 @@ public sealed class BacktestEngine
         foreach (var bar in historicalFeed)
         {
             if (bar.Close <= 0)
+            {
+                for (int i = 0; i < _strategies.Count; i++)
+                {
+                    var strategy = _strategies[i];
+                    if (_pendingOrders[strategy] is not null)
+                    {
+                        Console.WriteLine(
+                           $"[ENGINE WARNING] Invalid bar on {bar.Timestamp:yyyy-MM-dd} " +
+                           $"for '{strategy.Name}' — pending {_pendingOrders[strategy]!.Action} " +
+                           $"order cancelled. Verify dataset integrity.");
+                        _pendingOrders[strategy] = null;
+                    }
+                }
                 continue;
+            }
+
             _latestPrices[bar.Symbol] = bar.Close;
 
             for (int i = 0; i < _strategies.Count; i++)
@@ -56,11 +75,20 @@ public sealed class BacktestEngine
                 var strategy = _strategies[i];
                 var account = _strategyAccounts[strategy];
 
+                if (_pendingOrders[strategy] is { } pending)
+                {
+                    ExecuteOrder(
+                        pending,
+                        account,
+                        bar.Open,
+                        _latestPrices);
+                    _pendingOrders[strategy] = null;
+                }
+
                 OrderRequest? request = null;
                 try
                 {
-                    request =
-                        strategy.OnData(bar, account);
+                    request = strategy.OnData(bar, account);
                 }
                 catch (Exception ex)
                 {
@@ -68,14 +96,20 @@ public sealed class BacktestEngine
                     continue;
                 }
 
-                if (request is not null)
-                    ExecuteOrder(
-                        request,
-                        account,
-                        bar.Close,
-                        _latestPrices);
+                _pendingOrders[strategy] = request;
             }
+        }
 
+        for(int i = 0; i <_strategies.Count; i++)
+        {
+            var strategy = _strategies[i];
+            if (_pendingOrders[strategy] is not null)
+            {
+                Console.WriteLine(
+                    $"[ENGINE INFO] End of feed — pending {_pendingOrders[strategy]!.Action} " +
+                    $"order for '{strategy.Name}' discarded. No next bar available for execution.");
+                _pendingOrders[strategy] = null;
+            }
         }
 
     }
@@ -133,12 +167,12 @@ public sealed class BacktestEngine
 
         decimal inventoryValue = 0m;
 
-        foreach(var kvp in account.ActivePositions)
+        foreach (var kvp in account.ActivePositions)
         {
             string symbol = kvp.Key;
             int shares = kvp.Value;
 
-            if(_latestPrices.TryGetValue(symbol, out decimal currentPrice))
+            if (_latestPrices.TryGetValue(symbol, out decimal currentPrice))
             {
                 inventoryValue += shares * currentPrice;
             }
@@ -149,7 +183,7 @@ public sealed class BacktestEngine
     public IReadonlyAccountState GetAccountState
         (IStrategy strategy)
     {
-        if(strategy is null)
+        if (strategy is null)
             throw new ArgumentNullException(nameof(strategy));
 
         if (!_strategyAccounts.TryGetValue(strategy, out var state))
