@@ -37,7 +37,7 @@ public sealed class BacktestReporter
             (endingPortfolioValue - startingCapital) / startingCapital * 100m;
 
         double cagr = totalYears > 0
-            ? Math.Pow((double)(endingPortfolioValue / startingCapital), 1.0 / totalYears) - 1.0 * 100.0
+            ? (Math.Pow((double)(endingPortfolioValue / startingCapital), 1.0 / totalYears) - 1.0) * 100.0
             : 0.0;
 
         Console.WriteLine("--- Capital ---");
