@@ -2,6 +2,7 @@
 using QuantTrading.Infrastructure.Data;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Engine;
+using QuantTrading.Simulation.Reporting;
 using QuantTrading.Simulation.Strategies;
 
 namespace QuantTrading.ML.Engine;
@@ -19,6 +20,9 @@ public sealed class MlSmokeTest
         var parser = new LocalCsvParser();
         var historicalData = parser.ParseFile(CsvPath);
         //var historicalData = GenerateHistoricalData();
+
+        Console.WriteLine
+            ($"Loaded {historicalData.Count} bars from {CsvPath}");
 
         // ==========================================
         // 2. SETUP STRATEGY + ENGINE
@@ -73,7 +77,7 @@ public sealed class MlSmokeTest
         foreach (var position in finalState.ActivePositions)
         {
             Console.WriteLine(
-                $"Position: {position.Key} " +
+                $"Position: {position.Key} - " +
                 $"Qty: {position.Value}");
         }
 
@@ -81,8 +85,25 @@ public sealed class MlSmokeTest
         Console.WriteLine(
             "[SUCCESS] ML strategy executed without runtime failures.");
 
+        // Buy & Hold benchmark:
+        // buy at first bar open, hold to last bar close.
+        decimal firstOpen = historicalData[0].Open;
+        decimal lastClose = historicalData[^1].Close;
+        decimal buyAndHoldReturn = firstOpen > 0
+            ? (lastClose - firstOpen) / firstOpen * 100m
+            : 0m;
+
+        BacktestReporter reporter = new();
+        reporter.PrintReport(
+            trades: engine.GetCompletedTrades(strategy),
+            startingCapital: 10_000m,
+            endingPortfolioValue: finalPortfolioValue,
+            buyAndHoldReturn: buyAndHoldReturn,
+            firstBarTimestamp: historicalData[0].Timestamp,
+            lastBarTimestamp: historicalData[^1].Timestamp);
+
         // ==========================================
-        // 6. PHASE 2 — MODEL EVALUATION
+        // 7. PHASE 2 — MODEL EVALUATION
         // Tests model prediction quality directly,
         // independent of MlStrategy and BacktestEngine.
         // ==========================================
