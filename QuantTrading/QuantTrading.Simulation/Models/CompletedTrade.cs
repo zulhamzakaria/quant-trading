@@ -6,4 +6,8 @@ public sealed record CompletedTrade(
     decimal ExitPrice,
     int Quantity,
     DateTime EntryTimestamp,
-    DateTime ExitTimestamp);
+    DateTime ExitTimestamp)
+{
+    public decimal RealizedPnL =>
+        (ExitPrice - EntryPrice) * Quantity;
+};
