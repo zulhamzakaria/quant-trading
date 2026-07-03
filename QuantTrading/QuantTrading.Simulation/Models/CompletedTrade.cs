@@ -8,6 +8,8 @@ public sealed record CompletedTrade(
     DateTime EntryTimestamp,
     DateTime ExitTimestamp)
 {
+    // Derived property computed from immutable execution facts.
+    // Positive = profit, negative = loss.
     public decimal RealizedPnL =>
         (ExitPrice - EntryPrice) * Quantity;
 };
