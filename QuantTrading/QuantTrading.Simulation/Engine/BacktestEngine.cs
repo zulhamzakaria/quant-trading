@@ -1,4 +1,5 @@
-﻿using QuantTrading.Shared.Contracts;
+﻿using QuantTrading.Domain.Models;
+using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Models;
@@ -16,6 +17,12 @@ public sealed class BacktestEngine
     private readonly Dictionary<IStrategy, OrderRequest?>
         _pendingOrders = new();
 
+    private readonly Dictionary<IStrategy, List<CompletedTrade>>
+        _completedTrades = new();
+
+    private readonly 
+        Dictionary<IStrategy, Dictionary<string, (decimal price, DateTime timeStamp)>>
+        _entryPrices = new();
     public void RegisterStrategy(
         IStrategy strategy,
         decimal startingCash,
@@ -37,6 +44,10 @@ public sealed class BacktestEngine
         _strategyAccounts[strategy] =
             new StrategyAccountState(startingCash, currency);
         _pendingOrders[strategy] = null;
+        _completedTrades[strategy] = new List<CompletedTrade>();
+        _entryPrices[strategy] = 
+            new Dictionary<string, (decimal, DateTime)>
+            (StringComparer.OrdinalIgnoreCase);
     }
 
     public void RunSimulation
@@ -81,7 +92,10 @@ public sealed class BacktestEngine
                         pending,
                         account,
                         bar.Open,
-                        _latestPrices);
+                        bar.Timestamp,
+                        _latestPrices,
+                        _completedTrades[strategy],
+                        _entryPrices[strategy]);
                     _pendingOrders[strategy] = null;
                 }
 
@@ -118,7 +132,10 @@ public sealed class BacktestEngine
         OrderRequest request,
         StrategyAccountState account,
         decimal executionPrice,
-        Dictionary<string, decimal> globalPrices)
+        DateTime executionTimestamp,
+        Dictionary<string, decimal> globalPrices,
+        List<CompletedTrade> completedTrades,
+        Dictionary<string, (decimal price, DateTime timestamp)> entryPrices)
     {
         if (request.Quantity <= 0 || executionPrice <= 0)
             return;
@@ -136,6 +153,9 @@ public sealed class BacktestEngine
                     request.Symbol,
                     request.Quantity,
                     isExit: false);
+
+                entryPrices[request.Symbol] = 
+                    (executionPrice, executionTimestamp);
             }
         }
         else if (request.Action == OrderAction.Sell)
@@ -151,9 +171,36 @@ public sealed class BacktestEngine
                         request.Symbol,
                         request.Quantity,
                         isExit: true);
+
+                    if(entryPrices.TryGetValue
+                        (request.Symbol, out var entry))
+                    {
+                        completedTrades.Add(new CompletedTrade(
+                            Symbol: request.Symbol,
+                            EntryPrice: entry.price,
+                            ExitPrice: executionPrice,
+                            Quantity: request.Quantity,
+                            EntryTimestamp: entry.timestamp,
+                            ExitTimestamp: executionTimestamp));
+
+                        entryPrices.Remove(request.Symbol);
+                    }
+
                 }
             }
         }
+    }
+
+    public IReadOnlyList<CompletedTrade> GetCompletedTrades
+        (IStrategy strategy)
+    {
+        if (strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+        if (!_completedTrades.TryGetValue(strategy, out var trades))
+            throw new KeyNotFoundException(
+                "No trade history found for the provided strategy instance.");
+
+        return trades.AsReadOnly();
     }
 
     public decimal CalculateCurrentPortfolioValue
