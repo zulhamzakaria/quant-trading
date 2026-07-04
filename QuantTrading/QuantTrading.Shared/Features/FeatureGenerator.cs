@@ -18,7 +18,7 @@ public sealed class FeatureGenerator
         if (totalBars < 22)
             return featureList;
 
-        for (int i = 20; i < bars.Count; i++)
+        for (int i = 20; i < bars.Count - 1; i++)
         {
             var tomorrow = bars[i + 1];
             bool isTomorrowCloseHigher =
@@ -37,7 +37,7 @@ public sealed class FeatureGenerator
     public TrainingRow? ComputeLatestFeatures
         (IReadOnlyList<MarketData> bars)
     {
-        if(bars is null || bars.Count < MinBarRequired)
+        if (bars is null || bars.Count < MinBarRequired)
             return null;
         return CalculateRowAt
             (bars, bars.Count - 1, isTomorrowCloseHigher: false);
@@ -185,7 +185,7 @@ public sealed class FeatureGenerator
     {
         decimal hL =
             current.High - current.Low;
-        decimal hC = 
+        decimal hC =
             Math.Abs(current.High - prev.Close);
         decimal lC =
             Math.Abs(current.Low - prev.Close);
