@@ -7,7 +7,7 @@ public sealed class FeatureGenerator
 
     private const int MinBarRequired = 22;
 
-    public IReadOnlyList<TrainingRow> ComputeFeatures
+    public IReadOnlyList<TrainingRow> ComputeTrainingRows
         (IReadOnlyList<MarketData> bars)
     {
         List<TrainingRow> featureList = new();
@@ -16,12 +16,12 @@ public sealed class FeatureGenerator
 
         for (int i = 20; i < bars.Count - 1; i++)
         {
-var features = ComputeMarketFeaturesAt(bars, i);
-           if(features is null)
+            var features = ComputeMarketFeaturesAt(bars, i);
+            if (features is null)
                 continue;
 
-           bool isTomorrowCloseHigher = 
-                bars[i+1].Close > bars[i].Close;
+            bool isTomorrowCloseHigher =
+                 bars[i + 1].Close > bars[i].Close;
 
             featureList.Add
                 (ToTrainingRow(features, isTomorrowCloseHigher));

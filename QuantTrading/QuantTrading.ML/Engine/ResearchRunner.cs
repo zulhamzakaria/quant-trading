@@ -49,7 +49,7 @@ public sealed class ResearchRunner
                 continue;
 
             var trainingData = 
-                featureGen.ComputeFeatures(marketData);
+                featureGen.ComputeTrainingRows(marketData);
             if(trainingData.Count == 0)
                 continue;
 
