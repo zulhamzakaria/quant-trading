@@ -85,6 +85,16 @@ public sealed class FeatureGenerator
         }
         decimal sma20 = sumClose20 / 20m;
 
+        // 20-day Standard Deviation (for Bollinger Bands)
+        decimal sumSquaredDiff20 = 0m;
+        for (int j = 0; j < 20; j++)
+        {
+            decimal diff = bars[index - j].Close - sma20;
+            sumSquaredDiff20 += diff * diff;
+        }
+        decimal bollingerStdDev20 = 
+            (decimal)Math.Sqrt((double)(sumSquaredDiff20 / 20m));
+
         decimal sma5Ratio =
             sma5 != 0 ? current.Close / sma5 : 1.0m;
         decimal sma20Ratio =
@@ -176,7 +186,8 @@ public sealed class FeatureGenerator
             VolumeRatio = (float)volumeRatio,
             Rsi14 = (float)rsi14,
             AtrRatio14 = (float)atrRatio14,
-            IsTomorrowCloseHigher = isTomorrowCloseHigher
+            IsTomorrowCloseHigher = isTomorrowCloseHigher,
+            BollingerStdDev20 = (float)bollingerStdDev20
         };
     }
 

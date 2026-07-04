@@ -21,5 +21,7 @@ public sealed class TrainingRow
     public float AtrRatio14 { get; set; }
     [ColumnName("IsTomorrowCloseHigher")]
     public bool IsTomorrowCloseHigher { get; set; }
+    [ColumnName("BollingerStdDev20")]
+    public float BollingerStdDev20 { get; set; }
 };
 
