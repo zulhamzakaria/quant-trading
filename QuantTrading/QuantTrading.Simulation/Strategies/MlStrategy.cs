@@ -99,7 +99,7 @@ public sealed class MlStrategy : IStrategy
         }
 
         TrainingRow? latestFeature =
-            _featureGenerator.ComputeLatestFeatures(_bars);
+            _featureGenerator.ComputeTrainingRow(_bars);
 
         if (latestFeature is null)
         {

@@ -80,7 +80,7 @@ public sealed class MlModelEvaluation
                 buffer.RemoveAt(0);
 
             TrainingRow? features =
-                featureGenerator.ComputeLatestFeatures(buffer);
+                featureGenerator.ComputeTrainingRow(buffer);
 
             if (features is null)
                 continue;

@@ -14,39 +14,49 @@ public sealed class FeatureGenerator
         if (bars is null || bars.Count < MinBarRequired)
             return featureList;
 
-        int totalBars = bars.Count;
-        if (totalBars < 22)
-            return featureList;
-
         for (int i = 20; i < bars.Count - 1; i++)
         {
-            var tomorrow = bars[i + 1];
-            bool isTomorrowCloseHigher =
-                tomorrow.Close > bars[i].Close;
+var features = ComputeMarketFeaturesAt(bars, i);
+           if(features is null)
+                continue;
 
-            var row = CalculateRowAt
-                (bars, i, isTomorrowCloseHigher);
-            if (row is not null)
-                featureList.Add(row);
+           bool isTomorrowCloseHigher = 
+                bars[i+1].Close > bars[i].Close;
+
+            featureList.Add
+                (ToTrainingRow(features, isTomorrowCloseHigher));
         }
 
         return featureList;
 
     }
 
-    public TrainingRow? ComputeLatestFeatures
+    public TrainingRow? ComputeTrainingRow
         (IReadOnlyList<MarketData> bars)
     {
         if (bars is null || bars.Count < MinBarRequired)
             return null;
-        return CalculateRowAt
-            (bars, bars.Count - 1, isTomorrowCloseHigher: false);
+
+        var features = ComputeMarketFeaturesAt
+            (bars, bars.Count - 1);
+        if (features is null)
+            return null;
+
+        return ToTrainingRow
+            (features, isTomorrowCloseHigher: false);
     }
 
-    private TrainingRow? CalculateRowAt(
-        IReadOnlyList<MarketData> bars,
-        int index,
-        bool isTomorrowCloseHigher)
+    public MarketFeatures? ComputeMarketFeatures
+        (IReadOnlyList<MarketData> bars)
+    {
+        if (bars is null || bars.Count < MinBarRequired)
+            return null;
+
+        return ComputeMarketFeaturesAt(bars, bars.Count - 1);
+    }
+
+    private MarketFeatures? ComputeMarketFeaturesAt
+        (IReadOnlyList<MarketData> bars, int index)
     {
 
         if (index < 20 || index >= bars.Count)
@@ -92,7 +102,7 @@ public sealed class FeatureGenerator
             decimal diff = bars[index - j].Close - sma20;
             sumSquaredDiff20 += diff * diff;
         }
-        decimal bollingerStdDev20 = 
+        decimal bollingerStdDev20 =
             (decimal)Math.Sqrt((double)(sumSquaredDiff20 / 20m));
 
         decimal sma5Ratio =
@@ -123,9 +133,7 @@ public sealed class FeatureGenerator
         avgGain /= 14m;
         avgLoss /= 14m;
 
-        for (int m = startRsiIndex + 14;
-            m <= index;
-            m++)
+        for (int m = startRsiIndex + 14; m <= index; m++)
         {
             decimal change =
                 bars[m].Close - bars[m - 1].Close;
@@ -158,18 +166,16 @@ public sealed class FeatureGenerator
             k < startAtrIndex + 14 && k <= index;
             k++)
         {
-            avgAtr += CalculateTrueRange
-                (bars[k], bars[k - 1]);
+            avgAtr +=
+                CalculateTrueRange(bars[k], bars[k - 1]);
         }
         avgAtr /= 14m;
 
         for (int m = startAtrIndex + 14; m <= index; m++)
         {
             decimal tr =
-                CalculateTrueRange
-                (bars[m], bars[m - 1]);
-            avgAtr =
-                ((avgAtr * 13m) + tr) / 14m;
+                CalculateTrueRange(bars[m], bars[m - 1]);
+            avgAtr = ((avgAtr * 13m) + tr) / 14m;
         }
 
         decimal atrRatio14 =
@@ -177,17 +183,35 @@ public sealed class FeatureGenerator
             ? avgAtr / current.Close
             : 0m;
 
+        return new MarketFeatures(
+            Symbol: current.Symbol,
+            Timestamp: current.Timestamp,
+            Sma5: sma5,
+            Sma20: sma20,
+            Sma5Ratio: sma5Ratio,
+            Sma20Ratio: sma20Ratio,
+            Rsi14: rsi14,
+            AtrRatio14: atrRatio14,
+            BollingerStdDev20: bollingerStdDev20,
+            Return1D: return1D,
+            Return5D: return5D,
+            VolumeRatio: volumeRatio);
+    }
+
+    private static TrainingRow ToTrainingRow
+        (MarketFeatures features, bool isTomorrowCloseHigher)
+    {
         return new TrainingRow
         {
-            Return1D = (float)return1D,
-            Return5D = (float)return5D,
-            Sma5Ratio = (float)sma5Ratio,
-            Sma20Ratio = (float)sma20Ratio,
-            VolumeRatio = (float)volumeRatio,
-            Rsi14 = (float)rsi14,
-            AtrRatio14 = (float)atrRatio14,
-            IsTomorrowCloseHigher = isTomorrowCloseHigher,
-            BollingerStdDev20 = (float)bollingerStdDev20
+            Return1D = (float)features.Return1D,
+            Return5D = (float)features.Return5D,
+            Sma5Ratio = (float)features.Sma5Ratio,
+            Sma20Ratio = (float)features.Sma20Ratio,
+            VolumeRatio = (float)features.VolumeRatio,
+            Rsi14 = (float)features.Rsi14,
+            AtrRatio14 = (float)features.AtrRatio14,
+            BollingerStdDev20 = (float)features.BollingerStdDev20,
+            IsTomorrowCloseHigher = isTomorrowCloseHigher
         };
     }
 
