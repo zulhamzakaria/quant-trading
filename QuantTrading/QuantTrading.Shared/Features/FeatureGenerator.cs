@@ -215,7 +215,7 @@ public sealed class FeatureGenerator
         };
     }
 
-    private decimal CalculateTrueRange
+    private static decimal CalculateTrueRange
         (MarketData current, MarketData prev)
     {
         decimal hL =
