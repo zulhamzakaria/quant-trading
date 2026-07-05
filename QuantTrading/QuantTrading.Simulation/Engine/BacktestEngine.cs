@@ -1,6 +1,7 @@
 ﻿using QuantTrading.Domain.Models;
 using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Models;
 
@@ -23,6 +24,12 @@ public sealed class BacktestEngine
     private readonly 
         Dictionary<IStrategy, Dictionary<string, (decimal price, DateTime timeStamp)>>
         _entryPrices = new();
+
+
+    private readonly FeatureGenerator _featureGenerator = new();
+    private readonly Dictionary<string, List<MarketData>>
+        _barHistory = new(StringComparer.OrdinalIgnoreCase); 
+
     public void RegisterStrategy(
         IStrategy strategy,
         decimal startingCash,
@@ -79,7 +86,17 @@ public sealed class BacktestEngine
                 continue;
             }
 
+            if(!_barHistory.TryGetValue(bar.Symbol, out var history))
+            {
+                history = new List<MarketData>();
+                _barHistory[bar.Symbol] = history;
+            }
+            history.Add(bar);
+
             _latestPrices[bar.Symbol] = bar.Close;
+
+            var features = _featureGenerator
+                .ComputeMarketFeatures(history);
 
             for (int i = 0; i < _strategies.Count; i++)
             {
@@ -99,10 +116,14 @@ public sealed class BacktestEngine
                     _pendingOrders[strategy] = null;
                 }
 
+                if (features is null)
+                    continue;
+
                 OrderRequest? request = null;
                 try
                 {
-                    request = strategy.OnData(bar, account);
+                    request = strategy.OnData
+                        (bar, features, account);
                 }
                 catch (Exception ex)
                 {

@@ -1,5 +1,6 @@
 ﻿using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Simulation.Strategies;
@@ -52,7 +53,8 @@ public sealed class RsiStrategy : IStrategy
         _allocationPerTrade = allocationPerTrade;
     }
 
-    public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)
+    public OrderRequest? OnData
+        (MarketData data, MarketFeatures features, IReadonlyAccountState accountState)
     {
         if (data.Close <= 0) return null;
 

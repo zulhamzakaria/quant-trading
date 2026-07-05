@@ -85,7 +85,7 @@ public sealed class MlStrategy : IStrategy
     }
 
     public OrderRequest? OnData
-        (MarketData data, IReadonlyAccountState accountState)
+        (MarketData data, MarketFeatures features, IReadonlyAccountState accountState)
     {
         if (data is null || data.Close <= 0)
             return null;

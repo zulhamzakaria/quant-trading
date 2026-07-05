@@ -1,5 +1,6 @@
 ﻿using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Simulation.Strategies;
@@ -8,7 +9,7 @@ public sealed class DummyBuyAndHoldStrategy : IStrategy
 {
     public string Name => "Dummy Buy and Hold Verification Strategy";
 
-    public OrderRequest? OnData(MarketData data, IReadonlyAccountState accountState)
+    public OrderRequest? OnData(MarketData data, MarketFeatures features, IReadonlyAccountState accountState)
     {
         if (!accountState.HasPositionOpen(data.Symbol))
         {

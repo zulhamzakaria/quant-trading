@@ -1,5 +1,6 @@
 ﻿using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
+using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Simulation.Strategies;
@@ -40,7 +41,7 @@ public sealed class MaCrossStrategy : IStrategy
     }
 
     public OrderRequest? OnData
-        (MarketData data, IReadonlyAccountState accountState)
+        (MarketData data, MarketFeatures features, IReadonlyAccountState accountState)
     {
         if (data.Close <= 0)
             return null;
