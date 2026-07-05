@@ -19,7 +19,7 @@ public sealed class MaCrossStrategy : IStrategy
     private bool? _previousFastAboveSlow;
 
     public string Name
-        => $"ma-cross-strategy({_fastPeriod}/{_slowPeriod})";
+        => $"ma-trend({_fastPeriod}/{_slowPeriod})";
 
     public MaCrossStrategy(
         int fastPeriod = 10,
