@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML.Data;
+using QuantTrading.Shared.Features;
 
 namespace QuantTrading.Shared.Models;
 
@@ -23,5 +24,22 @@ public sealed class TrainingRow
     public bool IsTomorrowCloseHigher { get; set; }
     [ColumnName("BollingerStdDev20")]
     public float BollingerStdDev20 { get; set; }
+
+    public static TrainingRow FromMarketFeatures(MarketFeatures features)
+    {
+        return new TrainingRow
+        {
+            Return1D = (float)features.Return1D,
+            Return5D = (float)features.Return5D,
+            Sma5Ratio = (float)features.Sma5Ratio,
+            Sma20Ratio = (float)features.Sma20Ratio,
+            VolumeRatio = (float)features.VolumeRatio,
+            Rsi14 = (float)features.Rsi14,
+            AtrRatio14 = (float)features.AtrRatio14,
+            BollingerStdDev20 = (float)features.BollingerStdDev20,
+            IsTomorrowCloseHigher = false
+        };
+    }
+
 };
 
