@@ -15,7 +15,6 @@ public sealed class BuyAndHoldStrategy : IStrategy
             return null;
 
         int quantity = (int)(accountState.Cash / data.Close);
-
         if (quantity <= 0)
             return null;
 
