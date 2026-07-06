@@ -107,30 +107,9 @@ public sealed class BacktestReporter
         Console.WriteLine($"Total Realized P&L       : {totalRealizedPnL:F2}");
         Console.WriteLine();
 
-        decimal peak = 0m;
-        decimal maxDrawdown = 0m;
-        decimal runningPnL = 0m;
-
-        foreach (var trade in trades.OrderBy(t => t.ExitTimestamp))
-        {
-            runningPnL += trade.RealizedPnL;
-            if (runningPnL > peak)
-                peak = runningPnL;
-
-            decimal drawdown = peak > 0
-                ? (peak - runningPnL) / peak * 100m
-                : 0m;
-
-            if (drawdown > maxDrawdown)
-                maxDrawdown = drawdown;
-        }
-
         Console.WriteLine("--- Drawdown ---");
-        Console.WriteLine($"Max Drawdown (realized)  : {maxDrawdown:F2}%");
-        Console.WriteLine();
-        Console.WriteLine("[NOTE] Drawdown is computed on realized P&L only.");
-        Console.WriteLine("       Unrealized intra-trade drawdown is not captured.");
-        Console.WriteLine("       Full equity-curve drawdown is a future enhancement.");
+        Console.WriteLine("Max Drawdown             : N/A");
+        Console.WriteLine("[NOTE] Requires mark-to-market equity curve — not yet available.");
         Console.WriteLine();
 
         Console.WriteLine("=====================================");
