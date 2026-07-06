@@ -1,28 +1,36 @@
-﻿using QuantTrading.ML.Engine;
-using QuantTrading.Simulation.Engine;
+﻿using QuantTrading.Infrastructure.Data;
+using QuantTrading.Shared.Contracts;
+using QuantTrading.Simulation.Reporting;
 using QuantTrading.Simulation.Strategies;
-
-//// Db service not being used
-
-//var builder = Host.CreateApplicationBuilder(args);
-//builder.Services.AddDbContext<AppDbContext>(options =>
-//    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
-//    x => x.MigrationsAssembly("QuantTrading.Infrastructure")
-//));
-//// with using, Host disposed when scope ends
-//using IHost host = builder.Build();
-//using IServiceScope scope = host.Services.CreateScope();
+using QuantTrading.Simulation.Tournament;
 
 class Program
 {
+    private const string CsvPath = "AAPL.csv";
+    private const string ModelPath = "AAPL_Base_best_model.zip";
+    private const decimal StartingCapital = 10_000m;
     static void Main(string[] args)
     {
-        //ResearchRunner runner = new();
-        //runner.RunExperimentPipeline();
-        //PlumbingSmokeTest smokeTest = new();
-        //smokeTest.ExecuteVerificationPipeline();
-        MlSmokeTest mlSmokeTest = new();
-        mlSmokeTest.ExecuteVerificationPipeline();
 
+        LocalCsvParser parser = new();
+        var historicalData = parser.ParseFile(CsvPath);
+
+        Console.WriteLine($"Parsed {historicalData.Count} " +
+            $"rows of historical data from {CsvPath}.");
+
+        var strats = new List<IStrategy>
+        {
+            new BuyAndHoldStrategy(),
+            new MaCrossStrategy(),
+            new RsiStrategy(),
+            new BollingerBandsStrategy(),
+            new MlStrategy(ModelPath)
+        };
+
+        TournamentRunner runner = new(StartingCapital);
+        var results = runner.Run(strats, historicalData);
+
+        TournamentReporter reporter = new();
+        reporter.PrintReport(results);
     }
 }
