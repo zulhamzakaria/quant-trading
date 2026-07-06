@@ -10,18 +10,13 @@ public sealed class MlStrategy : IStrategy
 {
     private readonly PredictionEngine<TrainingRow, ModelPrediction>
         _predictionEngine;
-    private readonly FeatureGenerator _featureGenerator;
-    private readonly List<MarketData> _bars = new();
 
     private readonly decimal _allocationPerTrade;
-    private readonly int _maxHistoryBars;
     private readonly bool _diagnosticMode;
 
-    private int _barsProcessed, _warmupBars;
-    private bool _warmupComplete;
-
+    private int _barsProcessed;
     private int _predictionsGenerated, _truePredictions,
-        _falsePredictions;
+    _falsePredictions;
 
     private int _buySignals;
     private int _buyOrdersRequested;
@@ -41,7 +36,6 @@ public sealed class MlStrategy : IStrategy
     public MlStrategy(
         string modelPath,
         decimal allocationPerTrade = 2000m,
-        int maxHistoryBars = 100,
         bool diagnosticMode = false)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
@@ -52,17 +46,12 @@ public sealed class MlStrategy : IStrategy
             throw new FileNotFoundException(
                 "Target ML model binary file was not found",
                 modelPath);
-        if (maxHistoryBars < 25)
-            throw new ArgumentOutOfRangeException(
-                nameof(maxHistoryBars),
-                "Historical lookback window must look back at least 25 bars.");
         if (allocationPerTrade <= 0)
             throw new ArgumentOutOfRangeException(
                 nameof(allocationPerTrade),
                 "Allocation per trade must be greater than zero.");
 
         _allocationPerTrade = allocationPerTrade;
-        _maxHistoryBars = maxHistoryBars;
         _diagnosticMode = diagnosticMode;
 
         // Initialize ML.NET Context with set evaluation seeds
@@ -75,46 +64,33 @@ public sealed class MlStrategy : IStrategy
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to load or parse the ML model from path: {modelPath}", ex);
+            throw new InvalidOperationException
+                ($"Failed to load or parse the ML model from path: {modelPath}", ex);
         }
 
         _predictionEngine = mlContext.Model
             .CreatePredictionEngine<TrainingRow, ModelPrediction>(model);
-        _featureGenerator = new FeatureGenerator();
 
     }
 
-    public OrderRequest? OnData
-        (MarketData data, MarketFeatures features, IReadonlyAccountState accountState)
+    public OrderRequest? OnData(
+        MarketData data, 
+        MarketFeatures features, 
+        IReadonlyAccountState accountState)
     {
         if (data is null || data.Close <= 0)
             return null;
 
         _barsProcessed++;
-        _bars.Add(data);
-
-        if (_bars.Count > _maxHistoryBars)
-        {
-            _bars.RemoveAt(0);
-        }
 
         TrainingRow? latestFeature =
-            _featureGenerator.ComputeTrainingRow(_bars);
-
-        if (latestFeature is null)
-        {
-            if (!_warmupComplete)
-                _warmupBars++;
-            return null;
-        }
-
-        _warmupComplete = true;
+            TrainingRow.FromMarketFeatures(features);
 
         ModelPrediction prediction;
         try
         {
-            prediction = _predictionEngine
-                .Predict(latestFeature);
+            prediction = 
+                _predictionEngine.Predict(latestFeature);
         }
         catch (Exception ex)
         {
@@ -144,7 +120,8 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
             int targetShares =
-                (int)CalculatePositionSize(data.Close, accountState.Cash);
+                (int)CalculatePositionSize
+                (data.Close, accountState.Cash);
 
             if (targetShares > 0)
             {
@@ -242,13 +219,13 @@ public sealed class MlStrategy : IStrategy
 
                 if (_diagnosticMode)
                     PrintBarDecision(
-                        dateStr, 
-                        data.Close, 
-                        prediction, 
-                        "Long (0)", 
-                        accountState.Cash, 
-                        decision, 
-                        quantity: null, 
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        "Long (0)",
+                        accountState.Cash,
+                        decision,
+                        quantity: null,
                         reason);
             }
         }
@@ -296,7 +273,6 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine("========== ML Strategy Diagnostics ==========");
         Console.WriteLine();
         Console.WriteLine($"Bars Processed           : {_barsProcessed}");
-        Console.WriteLine($"Warmup Bars              : {_warmupBars}");
         Console.WriteLine();
         Console.WriteLine($"Predictions Generated    : {_predictionsGenerated}");
         Console.WriteLine();
@@ -347,7 +323,9 @@ public sealed class MlStrategy : IStrategy
         int? quantity,
         string? reason)
     {
-        string predLabel = prediction.PredictedLabel ? "Buy (True)" : "Sell/Down (False)";
+        string predLabel = prediction.PredictedLabel 
+            ? "Buy (True)" 
+            : "Sell/Down (False)";
 
         Console.WriteLine($"Date       : {date}");
         Console.WriteLine($"Close      : {close:F2}");
