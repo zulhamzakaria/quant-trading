@@ -6,4 +6,8 @@ public sealed record StrategyResult(
     decimal StartingCapital,
     decimal EndingPortfolioValue,
     DateTime FirstBarTimestamp,
-    DateTime LastBarTimestamp);
+    DateTime LastBarTimestamp)
+{
+    public decimal TotalReturn =>
+        (EndingPortfolioValue - StartingCapital) / StartingCapital * 100m;
+};
