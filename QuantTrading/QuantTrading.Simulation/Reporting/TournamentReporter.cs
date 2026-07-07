@@ -93,15 +93,19 @@ public sealed class TournamentReporter
 
             // no drawdown calculation here,
             // as it requires equity curve data
+            string totalReturnCol = $"{result.TotalReturn:F2}%";
+            string cagrCol = $"{cagr:F2}%";
+            string winRateCol = $"{winRate:F2}%";
+
             Console.WriteLine($"{result.StrategyName,-22} " +
-                $"{result.TotalReturn,-16:F2}% " +
-                $"{cagr,-12:F2}% {tradeCount,-10} " +
-                $"{winRate,-12:F2}% {profitFactor,-16} " +
+                $"{totalReturnCol,-16} " +
+                $"{cagrCol,-12} {tradeCount,-10} " +
+                $"{winRateCol,-12} {profitFactor,-16} " +
                 $"n/a");
 
         }
         Console.WriteLine();
-        Console.WriteLine("[NOTE] Ranked by Total Return. Drawdown computed on realized P&L only.");
+        Console.WriteLine("[NOTE] Max Drawdown requires mark-to-market equity curve — not yet available.");
         Console.WriteLine("========================================");
     }
 }
