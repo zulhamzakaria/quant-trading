@@ -1,4 +1,5 @@
-﻿using QuantTrading.Simulation.Models;
+﻿using QuantTrading.Simulation.Analytics;
+using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Reporting;
 
@@ -12,45 +13,35 @@ public sealed class BacktestReporter
         DateTime firstBarTimestamp,
         DateTime lastBarTimestamp)
     {
-        if (trades is null)
-            throw new ArgumentNullException(nameof(trades));
-        if (startingCapital <= 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(startingCapital),
-                "Starting capital must be greater than zero.");
+
+        var metrics = MetricsCalculator.Calculate(
+            trades,
+            startingCapital,
+            endingPortfolioValue,
+            firstBarTimestamp,
+            lastBarTimestamp);
 
         Console.WriteLine();
         Console.WriteLine("========== Backtest Report ==========");
         Console.WriteLine();
 
-        double totalDays =
-            (lastBarTimestamp - firstBarTimestamp).TotalDays;
-        double totalYears = totalDays / 365.25;
-
         Console.WriteLine("--- Period ---");
         Console.WriteLine($"From                     : {firstBarTimestamp:yyyy-MM-dd}");
         Console.WriteLine($"To                       : {lastBarTimestamp:yyyy-MM-dd}");
-        Console.WriteLine($"Duration                 : {totalYears:F2} years");
+        Console.WriteLine($"Duration                 : {metrics.TotalYears:F2} years");
         Console.WriteLine();
-
-        decimal totalReturn =
-            (endingPortfolioValue - startingCapital) / startingCapital * 100m;
-
-        double cagr = totalYears > 0
-            ? (Math.Pow((double)(endingPortfolioValue / startingCapital), 1.0 / totalYears) - 1.0) * 100.0
-            : 0.0;
 
         Console.WriteLine("--- Capital ---");
         Console.WriteLine($"Starting Capital         : {startingCapital:F2}");
         Console.WriteLine($"Ending Portfolio Value   : {endingPortfolioValue:F2}");
-        Console.WriteLine($"Total Return             : {totalReturn:F2}%");
-        Console.WriteLine($"CAGR                     : {cagr:F2}%");
+        Console.WriteLine($"Total Return             : {metrics.TotalYears:F2}%");
+        Console.WriteLine($"CAGR                     : {metrics.Cagr:F2}%");
         Console.WriteLine();
 
         // ── Buy & Hold Benchmark ──────────────────────────────────────────
         Console.WriteLine("--- Buy & Hold Benchmark ---");
         Console.WriteLine($"Buy & Hold Return        : {buyAndHoldReturn:F2}%");
-        Console.WriteLine($"Strategy vs Benchmark    : {(totalReturn - buyAndHoldReturn):F2}%");
+        Console.WriteLine($"Strategy vs Benchmark    : {(metrics.TotalReturn - buyAndHoldReturn):F2}%");
         Console.WriteLine();
 
         int tradeCount = trades.Count;
@@ -64,47 +55,20 @@ public sealed class BacktestReporter
             return;
         }
 
-        var winners =
-            trades.Where(t => t.RealizedPnL > 0).ToList();
-        var losers =
-            trades.Where(t => t.RealizedPnL < 0).ToList();
-        var breakEven =
-            trades.Where(t => t.RealizedPnL == 0).ToList();
 
-        decimal winRate =
-            (decimal)winners.Count / tradeCount * 100m;
-
-        decimal avgGain = winners.Count > 0
-            ? winners.Average(t => t.RealizedPnL)
-            : 0m;
-
-        decimal avgLoss = losers.Count > 0
-            ? losers.Average(t => t.RealizedPnL)
-            : 0m;
-
-        decimal grossProfit =
-            winners.Sum(t => t.RealizedPnL);
-        decimal grossLoss =
-            Math.Abs(losers.Sum(t => t.RealizedPnL));
-
-        string profitFactor = grossLoss > 0
-            ? (grossProfit / grossLoss).ToString("F2")
-            : "N/A";
-
-        decimal totalRealizedPnL =
-            trades.Sum(t => t.RealizedPnL);
 
         Console.WriteLine("--- Trade Statistics ---");
         Console.WriteLine($"Completed Trades         : {tradeCount}");
-        Console.WriteLine($"Winners                  : {winners.Count}");
-        Console.WriteLine($"Losers                   : {losers.Count}");
-        Console.WriteLine($"Break Even               : {breakEven.Count}");
+        Console.WriteLine($"Winners                  : {metrics.Winners}");
+        Console.WriteLine($"Losers                   : {metrics.Losers}");
+        Console.WriteLine($"Break Even               : {metrics.BreakEven}");
         Console.WriteLine();
-        Console.WriteLine($"Win Rate                 : {winRate:F2}%");
-        Console.WriteLine($"Avg Gain (winner)        : {avgGain:F2}");
-        Console.WriteLine($"Avg Loss (loser)         : {avgLoss:F2}");
-        Console.WriteLine($"Profit Factor            : {profitFactor}");
-        Console.WriteLine($"Total Realized P&L       : {totalRealizedPnL:F2}");
+        Console.WriteLine($"Win Rate                 : {metrics.WinRate:F2}%");
+        Console.WriteLine($"Avg Gain (winner)        : {metrics.AvgGain:F2}");
+        Console.WriteLine($"Avg Loss (loser)         : {metrics.AvgLoss:F2}");
+        Console.WriteLine($"Expectancy (per trade)   : {metrics.Expectancy:F2}");
+        Console.WriteLine($"Profit Factor            : {(metrics.ProfitFactor.HasValue ? $"{metrics.ProfitFactor:F2}" : "N/A")}");
+        Console.WriteLine($"Total Realized P&L       : {metrics.TotalRealizedPnL:F2}");
         Console.WriteLine();
 
         Console.WriteLine("--- Drawdown ---");
