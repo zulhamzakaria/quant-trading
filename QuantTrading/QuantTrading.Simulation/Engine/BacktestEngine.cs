@@ -20,14 +20,14 @@ public sealed class BacktestEngine
     private readonly Dictionary<IStrategy, List<CompletedTrade>>
         _completedTrades = new();
 
-    private readonly 
+    private readonly
         Dictionary<IStrategy, Dictionary<string, (decimal price, DateTime timeStamp)>>
         _entryPrices = new();
 
 
     private readonly FeatureGenerator _featureGenerator = new();
     private readonly Dictionary<string, List<MarketData>>
-        _barHistory = new(StringComparer.OrdinalIgnoreCase); 
+        _barHistory = new(StringComparer.OrdinalIgnoreCase);
 
     public void RegisterStrategy(
         IStrategy strategy,
@@ -51,7 +51,7 @@ public sealed class BacktestEngine
             new StrategyAccountState(startingCash, currency);
         _pendingOrders[strategy] = null;
         _completedTrades[strategy] = new List<CompletedTrade>();
-        _entryPrices[strategy] = 
+        _entryPrices[strategy] =
             new Dictionary<string, (decimal, DateTime)>
             (StringComparer.OrdinalIgnoreCase);
     }
@@ -85,7 +85,7 @@ public sealed class BacktestEngine
                 continue;
             }
 
-            if(!_barHistory.TryGetValue(bar.Symbol, out var history))
+            if (!_barHistory.TryGetValue(bar.Symbol, out var history))
             {
                 history = new List<MarketData>();
                 _barHistory[bar.Symbol] = history;
@@ -134,7 +134,7 @@ public sealed class BacktestEngine
             }
         }
 
-        for(int i = 0; i <_strategies.Count; i++)
+        for (int i = 0; i < _strategies.Count; i++)
         {
             var strategy = _strategies[i];
             if (_pendingOrders[strategy] is not null)
@@ -174,7 +174,7 @@ public sealed class BacktestEngine
                     request.Quantity,
                     isExit: false);
 
-                entryPrices[request.Symbol] = 
+                entryPrices[request.Symbol] =
                     (executionPrice, executionTimestamp);
             }
         }
@@ -192,7 +192,7 @@ public sealed class BacktestEngine
                         request.Quantity,
                         isExit: true);
 
-                    if(entryPrices.TryGetValue
+                    if (entryPrices.TryGetValue
                         (request.Symbol, out var entry))
                     {
                         completedTrades.Add(new CompletedTrade(
