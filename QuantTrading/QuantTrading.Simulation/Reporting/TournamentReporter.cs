@@ -1,4 +1,5 @@
-﻿using QuantTrading.Simulation.Models;
+﻿using QuantTrading.Simulation.Analytics;
+using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Reporting;
 
@@ -6,6 +7,13 @@ public sealed class TournamentReporter
 {
     private readonly BacktestReporter _backtestReporter = new();
 
+    // TODO(Checkpoint 1 / Phase 4): PROVISIONAL — not yet a decided value.
+    // Below this trade count, results are flagged as low-sample per the
+    // acceptance criteria ("sufficient number of trades to avoid overfitting
+    // to one or two lucky trades"). No formal minimum has been agreed yet;
+    // this exists only so the flag has *some* threshold to render. Replace
+    // once a real value is decided as part of Checkpoint 1.
+    private const int ProvisionalMinimumTradeThreshold = 10;
     public void PrintReport
         (IReadOnlyList<StrategyResult> results)
     {
@@ -47,63 +55,53 @@ public sealed class TournamentReporter
             $"{"Strategy",-22} {"Total Return",-16} {"CAGR",-12} {"Trades",-10} {"Win Rate",-12} {"Profit Factor",-16} {"Max Drawdown"}");
         Console.WriteLine(new string('-', 100));
 
-        foreach (var result in results.
-            OrderByDescending(r => r.TotalReturn))
+        //rank is based on CAGR
+        var ranked = results
+            .Select(r => (Result: r, Metrics: MetricsCalculator.Calculate(
+                r.Trades,
+                r.StartingCapital,
+                r.EndingPortfolioValue,
+                r.FirstBarTimestamp,
+                r.LastBarTimestamp)))
+            .OrderByDescending(x => double.IsNaN(x.Metrics.Cagr) ? double.MinValue : x.Metrics.Cagr);
+
+        foreach (var (result, metrics) in ranked)
         {
-            double totalDays =
-                (result.LastBarTimestamp - result.FirstBarTimestamp)
-                .TotalDays;
-            double totalYears = totalDays / 365.25;
+            string cagrCol =
+                double.IsNaN(metrics.Cagr)
+                ? "N/A"
+                : $"{metrics.Cagr:F2}%";
+            string tradeCountCol =
+                metrics.TradeCount < ProvisionalMinimumTradeThreshold
+                ? $"{metrics.TradeCount}*"
+                : $"{metrics.TradeCount}";
 
-            double cagr = totalYears > 0 ?
-                (Math.Pow((double)(result.EndingPortfolioValue / result.StartingCapital), 1 / totalYears) - 1) * 100.0
-                : 0;
-
-            int tradeCount = result.Trades.Count;
-
-            if (tradeCount == 0)
+            if (metrics.TradeCount == 0)
             {
                 Console.WriteLine(
-                     $"{result.StrategyName,-22} " +
-                     $"{result.TotalReturn,-16:F2}% " +
-                     $"{cagr,-12:F2}% {"0",-10} {"N/A",-12} " +
-                     $"{"N/A",-16} " +
-                     $"{"N/A"}");
+                    $"{result.StrategyName,-22} " +
+                    $"{metrics.TotalReturn,-14:F2}% " +
+                    $"{cagrCol,-10} {tradeCountCol,-8} " +
+                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {"N/A"}");
                 continue;
             }
 
-            var winners = result.Trades
-                .Where(t => t.RealizedPnL > 0)
-                .ToList();
-            var losers = result.Trades
-                .Where(t => t.RealizedPnL < 0)
-                .ToList();
-
-            decimal winRate =
-                (decimal)winners.Count / tradeCount * 100m;
-
-            decimal grossProfit =
-                winners.Sum(t => t.RealizedPnL);
-            decimal grossLoss =
-                Math.Abs(losers.Sum(t => t.RealizedPnL));
-
-            string profitFactor = grossLoss > 0
-                ? (grossProfit / grossLoss).ToString("F2")
+            string winRateCol = $"{metrics.WinRate:F2}% ";
+            string profitFactorCol = metrics.ProfitFactor.HasValue
+                ? $"{metrics.ProfitFactor.Value:F2}"
                 : "N/A";
+            string expectancyCol = metrics.Expectancy.HasValue
+                ? $"{metrics.Expectancy.Value:F2}"
+                : "N/A";
+            string totalReturnCol = $"{metrics.TotalReturn:F2}%";
 
-            // no drawdown calculation here,
-            // as it requires equity curve data
-            string totalReturnCol = $"{result.TotalReturn:F2}%";
-            string cagrCol = $"{cagr:F2}%";
-            string winRateCol = $"{winRate:F2}%";
-
-            Console.WriteLine($"{result.StrategyName,-22} " +
-                $"{totalReturnCol,-16} " +
-                $"{cagrCol,-12} {tradeCount,-10} " +
-                $"{winRateCol,-12} {profitFactor,-16} " +
-                $"n/a");
-
+            Console.WriteLine(
+                $"{result.StrategyName,-22} " +
+                $"{totalReturnCol,-14} " +
+                $"{cagrCol,-10} {tradeCountCol,-8} " +
+                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} n/a");
         }
+
         Console.WriteLine();
         Console.WriteLine("[NOTE] Max Drawdown requires mark-to-market equity curve — not yet available.");
         Console.WriteLine("========================================");
