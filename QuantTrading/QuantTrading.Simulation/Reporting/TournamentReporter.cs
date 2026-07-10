@@ -42,6 +42,7 @@ public sealed class TournamentReporter
                 result.FirstBarTimestamp,
                 result.LastBarTimestamp);
         }
+
         PrintComparativeSummary(results);
     }
 
@@ -52,7 +53,14 @@ public sealed class TournamentReporter
         Console.WriteLine("========== Tournament Summary ==========");
         Console.WriteLine();
         Console.WriteLine(
-            $"{"Strategy",-22} {"Total Return",-16} {"CAGR",-12} {"Trades",-10} {"Win Rate",-12} {"Profit Factor",-16} {"Max Drawdown"}");
+            $"{"Strategy",-22} " +
+            $"{"Total Return",-16} " +
+            $"{"CAGR",-12} " +
+            $"{"Trades",-10} " +
+            $"{"Win Rate",-12} " +
+            $"{"Profit Factor",-16} " +
+            $"{"Expectancy",-12} " +
+            $"{"Max Drawdown"}");
         Console.WriteLine(new string('-', 100));
 
         //rank is based on CAGR

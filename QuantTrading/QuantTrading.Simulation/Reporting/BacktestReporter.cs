@@ -34,7 +34,7 @@ public sealed class BacktestReporter
         Console.WriteLine("--- Capital ---");
         Console.WriteLine($"Starting Capital         : {startingCapital:F2}");
         Console.WriteLine($"Ending Portfolio Value   : {endingPortfolioValue:F2}");
-        Console.WriteLine($"Total Return             : {metrics.TotalYears:F2}%");
+        Console.WriteLine($"Total Return             : {metrics.TotalReturn:F2}%");
         Console.WriteLine($"CAGR                     : {metrics.Cagr:F2}%");
         Console.WriteLine();
 
