@@ -86,9 +86,10 @@ public sealed class TournamentReporter
 
             if (metrics.TradeCount == 0)
             {
+                string zeroTradeReturnCol = $"{metrics.TotalReturn:F2}%";
                 Console.WriteLine(
                     $"{result.StrategyName,-22} " +
-                    $"{metrics.TotalReturn,-14:F2}% " +
+                    $"{zeroTradeReturnCol,-14} " +
                     $"{cagrCol,-10} {tradeCountCol,-8} " +
                     $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {"N/A"}");
                 continue;
