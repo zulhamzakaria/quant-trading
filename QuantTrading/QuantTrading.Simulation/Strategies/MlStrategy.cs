@@ -14,6 +14,8 @@ public sealed class MlStrategy : IStrategy
     private readonly decimal _allocationPerTrade;
     private readonly bool _diagnosticMode;
 
+    private readonly float _confidenceThreshold;
+
     private int _barsProcessed;
     private int _predictionsGenerated, _truePredictions,
     _falsePredictions;
@@ -24,6 +26,7 @@ public sealed class MlStrategy : IStrategy
     private int _sellOrdersRequested;
     private int _holdDecisions;
     private int _rejectedOrders;
+    private int _lowConfidenceSkips;
 
     private readonly List<(
         int index, string date, decimal close,
@@ -36,7 +39,8 @@ public sealed class MlStrategy : IStrategy
     public MlStrategy(
         string modelPath,
         decimal allocationPerTrade = 2000m,
-        bool diagnosticMode = false)
+        bool diagnosticMode = false,
+        float confidenceThreshold = 0.5f)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -50,9 +54,15 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentOutOfRangeException(
                 nameof(allocationPerTrade),
                 "Allocation per trade must be greater than zero.");
+        if (confidenceThreshold < 0.5f || confidenceThreshold >= 1f)
+            throw new ArgumentOutOfRangeException(
+                nameof(confidenceThreshold),
+                "Confidence threshold must be in the range [0.5, 1.0) — " +
+                "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
 
         _allocationPerTrade = allocationPerTrade;
         _diagnosticMode = diagnosticMode;
+        _confidenceThreshold = confidenceThreshold;
 
         // Initialize ML.NET Context with set evaluation seeds
         var mlContext = new MLContext(seed: 42);
@@ -107,6 +117,11 @@ public sealed class MlStrategy : IStrategy
         else
             _falsePredictions++;
 
+        bool confidentUp =
+            prediction.Probability >= _confidenceThreshold;
+        bool confidentDown =
+            prediction.Probability <= (1 - _confidenceThreshold);
+
         bool hasPosition =
             accountState.HasPositionOpen(data.Symbol);
         string dateStr =
@@ -116,7 +131,7 @@ public sealed class MlStrategy : IStrategy
         string decision;
         string? reason = null;
 
-        if (prediction.PredictedLabel && !hasPosition)
+        if (confidentUp && !hasPosition)
         {
             _buySignals++;
             int targetShares =
@@ -235,6 +250,16 @@ public sealed class MlStrategy : IStrategy
             decision = "HOLD";
             reason = "No position to exit";
 
+            if(!confidentUp && !confidentDown)
+            {
+                _lowConfidenceSkips++;
+                reason = $"Prediction confidence below threshold ({prediction.Probability:F2})";
+            }
+            else
+            {
+                reason = "No positiion to exit";
+            }
+
             if (_diagnosticMode)
                 PrintBarDecision(
                     dateStr,
@@ -287,6 +312,7 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine();
         Console.WriteLine($"Hold Decisions           : {_holdDecisions}");
         Console.WriteLine($"Rejected Orders          : {_rejectedOrders}");
+        Console.WriteLine($"Low Confidence Skips     : {_lowConfidenceSkips}");
         Console.WriteLine();
         Console.WriteLine($"Final Cash               : {accountState.Cash:F2}");
         // Note: Final Equity requires BacktestEngine.CalculateCurrentPortfolioValue(strategy).
