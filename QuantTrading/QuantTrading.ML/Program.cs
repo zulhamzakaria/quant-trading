@@ -18,11 +18,6 @@ class Program
         LocalCsvParser parser = new();
         var historicalData = parser.ParseFile(CsvPath);
 
-        // TEMP DEBUG: Print the first 5 rows of historical data
-        Console.WriteLine($"Parsed {historicalData.Count} rows.");
-        Console.WriteLine($"First bar: {historicalData[0].Timestamp:yyyy-MM-dd}, Close={historicalData[0].Close}");
-        Console.WriteLine($"Last bar:  {historicalData[^1].Timestamp:yyyy-MM-dd}, Close={historicalData[^1].Close}");
-
         Console.WriteLine($"Parsed {historicalData.Count} " +
             $"rows of historical data from {CsvPath}.");
 
@@ -39,9 +34,9 @@ class Program
         var strats = new List<IStrategy>
             {
                 new BuyAndHoldStrategy(),
-        //        new MaCrossStrategy(),
-        //        new RsiStrategy(),
-        //        new BollingerBandsStrategy(),
+                new MaCrossStrategy(),
+                new RsiStrategy(),
+                new BollingerBandsStrategy(),
                 new MlStrategy(ModelPath)
             };
 
