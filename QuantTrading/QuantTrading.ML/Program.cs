@@ -34,7 +34,7 @@ class Program
         var strats = new List<IStrategy>
             {
                 new BuyAndHoldStrategy(),
-                new MaCrossStrategy(),
+        //        new MaCrossStrategy(),
         //        new RsiStrategy(),
         //        new BollingerBandsStrategy(),
                 new MlStrategy(ModelPath)
