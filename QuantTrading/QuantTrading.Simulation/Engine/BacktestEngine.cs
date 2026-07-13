@@ -244,6 +244,16 @@ public sealed class BacktestEngine
                 inventoryValue += shares * currentPrice;
             }
         }
+
+        // TEMP DEBUG — remove after discrepancy investigation
+        Console.WriteLine($"[DEBUG] {strategy.Name} — Cash: {account.Cash}");
+        if (account.ActivePositions.ContainsKey("AAPL"))
+            Console.WriteLine($"[DEBUG] {strategy.Name} — Shares (AAPL): {account.ActivePositions["AAPL"]}");
+        else
+            Console.WriteLine($"[DEBUG] {strategy.Name} — No AAPL position held.");
+        Console.WriteLine($"[DEBUG] {strategy.Name} — Latest Price (AAPL): {(_latestPrices.TryGetValue("AAPL", out var p) ? p.ToString() : "N/A")}");
+
+
         return account.Cash + inventoryValue;
     }
 
