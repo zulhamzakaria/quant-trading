@@ -92,6 +92,8 @@ public sealed class BacktestEngine
             }
             history.Add(bar);
 
+
+            //latest price update for portfolio valuation
             _latestPrices[bar.Symbol] = bar.Close;
 
             var features = _featureGenerator
@@ -109,7 +111,6 @@ public sealed class BacktestEngine
                         account,
                         bar.Open,
                         bar.Timestamp,
-                        _latestPrices,
                         _completedTrades[strategy],
                         _entryPrices[strategy]);
                     _pendingOrders[strategy] = null;
@@ -153,14 +154,11 @@ public sealed class BacktestEngine
         StrategyAccountState account,
         decimal executionPrice,
         DateTime executionTimestamp,
-        Dictionary<string, decimal> globalPrices,
         List<CompletedTrade> completedTrades,
         Dictionary<string, (decimal price, DateTime timestamp)> entryPrices)
     {
         if (request.Quantity <= 0 || executionPrice <= 0)
             return;
-
-        globalPrices[request.Symbol] = executionPrice;
 
         decimal totalValue = request.Quantity * executionPrice;
 
