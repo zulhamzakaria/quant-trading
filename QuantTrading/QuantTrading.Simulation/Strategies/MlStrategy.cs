@@ -16,6 +16,20 @@ public sealed class MlStrategy : IStrategy
 
     private readonly float _confidenceThreshold;
 
+    // Probability-based early exit threshold (Checkpoint 2, exit-strategy
+    // experiment). Independent of _confidenceThreshold — entry and exit are
+    // different trading decisions and are not coupled.
+    // Semantics: exit if Probability < _exitThreshold while holding, even
+    // if PredictedLabel is still nominally true. This only has a meaningful
+    // effect when _exitThreshold > 0.5 — e.g. 0.60 means "exit if
+    // conviction in the up-move has weakened below 60%, even though the
+    // model technically still predicts up." A threshold at or below 0.5
+    // is a no-op: Probability < 0.5 already coincides with PredictedLabel
+    // == false in the normal case, making it redundant with the existing
+    // label-flip exit. Default of 0.5f therefore disables early exits,
+    // preserving prior behavior exactly.
+    private readonly float _exitThreshold;
+
     private int _barsProcessed;
     private int _predictionsGenerated, _truePredictions,
     _falsePredictions;
@@ -27,6 +41,7 @@ public sealed class MlStrategy : IStrategy
     private int _holdDecisions;
     private int _rejectedOrders;
     private int _lowConfidenceSkips;
+    private int _earlyExitsOnWeakConfidence;
 
     private readonly List<(
         int index, string date, decimal close,
@@ -40,7 +55,8 @@ public sealed class MlStrategy : IStrategy
         string modelPath,
         decimal allocationPerTrade = 2000m,
         bool diagnosticMode = false,
-        float confidenceThreshold = 0.5f)
+        float confidenceThreshold = 0.5f,
+        float exitThreshold = 0.5f)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -59,10 +75,19 @@ public sealed class MlStrategy : IStrategy
                 nameof(confidenceThreshold),
                 "Confidence threshold must be in the range [0.5, 1.0) — " +
                 "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
-
+        if (exitThreshold < 0.5f || exitThreshold >= 1f)
+            throw new ArgumentOutOfRangeException(
+                nameof(exitThreshold),
+                "Exit threshold must be in the range [0.5, 1.0) — " +
+                "0.5 disables early exits (prior behavior, no-op since Probability < 0.5 " +
+                "already coincides with PredictedLabel == false); values above 0.5 " +
+                "tighten the hold requirement (exit while confidence weakens, even if " +
+                "still nominally predicting up).");
+        
         _allocationPerTrade = allocationPerTrade;
         _diagnosticMode = diagnosticMode;
         _confidenceThreshold = confidenceThreshold;
+        _exitThreshold = exitThreshold;
 
         // Initialize ML.NET Context with set evaluation seeds
         var mlContext = new MLContext(seed: 42);
@@ -117,6 +142,16 @@ public sealed class MlStrategy : IStrategy
         else
             _falsePredictions++;
 
+        // Confidence thresholding (Checkpoint 2, entry-filtering experiment):
+        // ML.NET's Probability is P(positive class), i.e. P(PredictedLabel
+        // == true), regardless of which label won.
+        // Scope: entries only for this experiment. A Buy is only initiated
+        // when confidentUp holds; existing exit behavior (raw PredictedLabel)
+        // is intentionally left unchanged so the effect of entry filtering
+        // can be measured in isolation. Probability-aware exits are a
+        // separate, later experiment.
+        // At the default threshold of 0.5, confidentUp reduces to
+        // PredictedLabel == true, i.e. no filtering — prior behavior.
         bool confidentUp =
             prediction.Probability >= _confidenceThreshold;
         bool confidentDown =
@@ -130,6 +165,20 @@ public sealed class MlStrategy : IStrategy
         OrderRequest? order = null;
         string decision;
         string? reason = null;
+
+        // Exit condition (Checkpoint 2, probability-based exit experiment):
+        // supplements, does not replace, the original label-flip exit.
+        // Exits fire on PredictedLabel == false (unchanged, original logic)
+        // OR when held-position confidence weakens below _exitThreshold,
+        // even if PredictedLabel hasn't technically flipped yet. Checked
+        // before the "already holding" branch so an early exit can fire
+        // whenever confidence has dropped below the (raised) bar, even
+        // while PredictedLabel is still nominally true. At the default
+        // exitThreshold of 0.5f this condition is a no-op — Probability < 0.5
+        // already coincides with PredictedLabel == false in the normal case
+        // — so behavior is identical to the original label-flip-only exit.
+        bool shouldExitOnWeakConfidence = 
+            hasPosition && prediction.Probability < _exitThreshold;
 
         if (confidentUp && !hasPosition)
         {
@@ -178,6 +227,72 @@ public sealed class MlStrategy : IStrategy
                         reason);
             }
         }
+        else if 
+            ((!prediction.PredictedLabel || shouldExitOnWeakConfidence) 
+            && hasPosition)
+        {
+            _sellSignals++;
+            int heldQty =
+                accountState.GetPositionSize(data.Symbol);
+
+            if (heldQty > 0)
+            {
+                order = new OrderRequest(
+                    data.Symbol,
+                    OrderType.Market,
+                    OrderAction.Sell,
+                    heldQty);
+
+                _sellOrdersRequested++;
+                decision = "SELL";
+
+                if (shouldExitOnWeakConfidence 
+                    && prediction.PredictedLabel)
+                {
+                    _earlyExitsOnWeakConfidence++;
+                    // TEMP DEBUG — remove after confirming the early-exit
+                    // path actually fires for the chosen exitThreshold.
+                    if (_earlyExitsOnWeakConfidence <= 5)
+                        Console.WriteLine(
+                            $"[DEBUG] Early exit #{_earlyExitsOnWeakConfidence} on {dateStr} — " +
+                            $"Probability={prediction.Probability:F3} < exitThreshold, " +
+                            $"PredictedLabel still true.");
+                }
+
+                var exitReason = shouldExitOnWeakConfidence
+                    && prediction.PredictedLabel
+                    ? $"Early exit on weak confidence (Probability={prediction.Probability:F2} < exitThreshold={_exitThreshold:F2})"
+                    : null;
+
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        $"Long ({heldQty})",
+                        accountState.Cash,
+                        decision,
+                        quantity: heldQty,
+                        reason: exitReason);
+            }
+            else
+            {
+                _holdDecisions++;
+                decision = "HOLD";
+                reason = "Position open but size reported as zero";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(
+                        dateStr,
+                        data.Close,
+                        prediction,
+                        "Long (0)",
+                        accountState.Cash,
+                        decision,
+                        quantity: null,
+                        reason);
+            }
+        }
         else if (prediction.PredictedLabel && hasPosition)
         {
             _holdDecisions++;
@@ -196,52 +311,6 @@ public sealed class MlStrategy : IStrategy
                     decision,
                     quantity: null,
                     reason);
-            }
-        }
-        else if (!prediction.PredictedLabel && hasPosition)
-        {
-            _sellSignals++;
-            int heldQty =
-                accountState.GetPositionSize(data.Symbol);
-
-            if (heldQty > 0)
-            {
-                order = new OrderRequest(
-                    data.Symbol,
-                    OrderType.Market,
-                    OrderAction.Sell,
-                    heldQty);
-
-                _sellOrdersRequested++;
-                decision = "SELL";
-
-                if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        $"Long ({heldQty})",
-                        accountState.Cash,
-                        decision,
-                        quantity: heldQty,
-                        reason: null);
-            }
-            else
-            {
-                _holdDecisions++;
-                decision = "HOLD";
-                reason = "Position open but size reported as zero";
-
-                if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        "Long (0)",
-                        accountState.Cash,
-                        decision,
-                        quantity: null,
-                        reason);
             }
         }
         else
@@ -313,6 +382,7 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine($"Hold Decisions           : {_holdDecisions}");
         Console.WriteLine($"Rejected Orders          : {_rejectedOrders}");
         Console.WriteLine($"Low Confidence Skips     : {_lowConfidenceSkips}");
+        Console.WriteLine($"Early Exits (weak conf.) : {_earlyExitsOnWeakConfidence}");
         Console.WriteLine();
         Console.WriteLine($"Final Cash               : {accountState.Cash:F2}");
         // Note: Final Equity requires BacktestEngine.CalculateCurrentPortfolioValue(strategy).
@@ -325,7 +395,13 @@ public sealed class MlStrategy : IStrategy
             Console.WriteLine();
             Console.WriteLine($"First {_predictionTable.Count} Predictions");
             Console.WriteLine();
-            Console.WriteLine($"{"#",-4} {"Date",-12} {"Close",-10} {"Prediction",-12} {"Probability",-13} {"Score",-10} {"Action"}");
+            Console.WriteLine($"{"#",-4} " +
+                $"{"Date",-12} " +
+                $"{"Close",-10} " +
+                $"{"Prediction",-12} " +
+                $"{"Probability",-13} " +
+                $"{"Score",-10} " +
+                $"{"Action"}");
             Console.WriteLine(new string('-', 68));
 
             foreach (var (index, date, close, label, probability, score, action) in _predictionTable)
