@@ -10,11 +10,17 @@ class Program
     private const string ModelPath = "AAPL_Base_best_model.zip";
     private const decimal StartingCapital = 10_000m;
 
-    private static readonly float[] confidenceThresholds =
-        {0.55f, 0.60f, 0.65f, 0.70f, 0.75f};
+    // Checkpoint 2 — Confidence Thresholding experiment: COMPLETE, REJECTED.
+    // See handoff doc. Entries at default (0.5, unfiltered) confirmed best.
+
+    // Checkpoint 2 — Probability-Based Exit experiment (current).
+    // Entries left at default (unfiltered) to isolate the exit variable.
+    // 0.50 omitted: it's a no-op (identical to the original label-flip-only
+    // exit), already covered by the Checkpoint 1 baseline.
+    private static readonly float[] ExitThresholds =
+        {0.55f, 0.60f, 0.65f, 0.70f};
     static void Main(string[] args)
     {
-
         LocalCsvParser parser = new();
         var historicalData = parser.ParseFile(CsvPath);
 
@@ -24,11 +30,11 @@ class Program
         TournamentRunner runner = new(StartingCapital);
         TournamentReporter reporter = new();
 
-        foreach (float threshold in confidenceThresholds)
+        foreach (float threshold in ExitThresholds)
         {
             Console.WriteLine();
             Console.WriteLine(new string('#', 60));
-            Console.WriteLine($"# ML CONFIDENCE THRESHOLD = {threshold:F2}");
+            Console.WriteLine($"# ML EXIT THRESHOLD = {threshold:F2}");
             Console.WriteLine(new string('#', 60));
 
             var strats = new List<IStrategy>
@@ -37,7 +43,7 @@ class Program
                 new MaCrossStrategy(),
                 new RsiStrategy(),
                 new BollingerBandsStrategy(),
-                new MlStrategy(ModelPath, confidenceThreshold: threshold)
+                new MlStrategy(ModelPath, exitThreshold: threshold)
             };
 
             var results = runner.Run(strats, historicalData);
