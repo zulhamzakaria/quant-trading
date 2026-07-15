@@ -7,7 +7,7 @@ using QuantTrading.Simulation.Tournament;
 class Program
 {
     private const string CsvPath = "AAPL.csv";
-    private const string ModelPath = "AAPL_Base_best_model.zip";
+    private const string ModelPath = "AAPL_Rsi_best_model.zip";
     private const decimal StartingCapital = 10_000m;
 
     // Checkpoint 2 — Confidence Thresholding experiment: COMPLETE, REJECTED.
@@ -17,8 +17,8 @@ class Program
     // Entries left at default (unfiltered) to isolate the exit variable.
     // 0.50 omitted: it's a no-op (identical to the original label-flip-only
     // exit), already covered by the Checkpoint 1 baseline.
-    private static readonly float[] ExitThresholds =
-        {0.55f, 0.60f, 0.65f, 0.70f};
+    //private static readonly float[] ExitThresholds =
+    //    {0.55f, 0.60f, 0.65f, 0.70f};
     static void Main(string[] args)
     {
         LocalCsvParser parser = new();
@@ -30,12 +30,12 @@ class Program
         TournamentRunner runner = new(StartingCapital);
         TournamentReporter reporter = new();
 
-        foreach (float threshold in ExitThresholds)
-        {
-            Console.WriteLine();
-            Console.WriteLine(new string('#', 60));
-            Console.WriteLine($"# ML EXIT THRESHOLD = {threshold:F2}");
-            Console.WriteLine(new string('#', 60));
+        //foreach (float threshold in ExitThresholds)
+        //{
+        //    Console.WriteLine();
+        //    Console.WriteLine(new string('#', 60));
+        //    Console.WriteLine($"# ML EXIT THRESHOLD = {threshold:F2}");
+        //    Console.WriteLine(new string('#', 60));
 
             var strats = new List<IStrategy>
             {
@@ -43,11 +43,11 @@ class Program
                 new MaCrossStrategy(),
                 new RsiStrategy(),
                 new BollingerBandsStrategy(),
-                new MlStrategy(ModelPath, exitThreshold: threshold)
+                new MlStrategy(ModelPath)
             };
 
             var results = runner.Run(strats, historicalData);
             reporter.PrintReport(results);
-        }
+        //}
     }
 }
