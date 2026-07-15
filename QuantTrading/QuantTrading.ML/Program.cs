@@ -7,7 +7,8 @@ using QuantTrading.Simulation.Tournament;
 class Program
 {
     private const string CsvPath = "AAPL.csv";
-    private const string ModelPath = "AAPL_Rsi_best_model.zip";
+    //private const string ModelPath = "AAPL_Rsi_best_model.zip";
+    private const string ModelPath = "AAPL_Base_best_model.zip";
     private const decimal StartingCapital = 10_000m;
 
     // Checkpoint 2 — Confidence Thresholding experiment: COMPLETE, REJECTED.
