@@ -28,7 +28,11 @@ public sealed class MlStrategy : IStrategy
     // == false in the normal case, making it redundant with the existing
     // label-flip exit. Default of 0.5f therefore disables early exits,
     // preserving prior behavior exactly.
-    private readonly float _exitThreshold;
+    // Nullable by design: null disables early-exit entirely.
+    // Earlier default (float 0.5) assumed Probability < 0.5 == PredictedLabel false.
+    // That assumption was wrong — they disagree in ~1–2% of cases (e.g. Prob=0.474, Label=true).
+    // Result: silent early exits. Nullable removes this class of bug by eliminating any default cutoff.
+    private readonly float? _exitThreshold;
 
     private int _barsProcessed;
     private int _predictionsGenerated, _truePredictions,
@@ -56,7 +60,7 @@ public sealed class MlStrategy : IStrategy
         decimal allocationPerTrade = 2000m,
         bool diagnosticMode = false,
         float confidenceThreshold = 0.5f,
-        float exitThreshold = 0.5f)
+        float? exitThreshold = null)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -75,7 +79,8 @@ public sealed class MlStrategy : IStrategy
                 nameof(confidenceThreshold),
                 "Confidence threshold must be in the range [0.5, 1.0) — " +
                 "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
-        if (exitThreshold < 0.5f || exitThreshold >= 1f)
+        if (exitThreshold is  not null &&
+            (exitThreshold < 0.5f || exitThreshold >= 1f))
             throw new ArgumentOutOfRangeException(
                 nameof(exitThreshold),
                 "Exit threshold must be in the range [0.5, 1.0) — " +
@@ -142,16 +147,12 @@ public sealed class MlStrategy : IStrategy
         else
             _falsePredictions++;
 
-        // Confidence thresholding (Checkpoint 2, entry-filtering experiment):
-        // ML.NET's Probability is P(positive class), i.e. P(PredictedLabel
-        // == true), regardless of which label won.
-        // Scope: entries only for this experiment. A Buy is only initiated
-        // when confidentUp holds; existing exit behavior (raw PredictedLabel)
-        // is intentionally left unchanged so the effect of entry filtering
-        // can be measured in isolation. Probability-aware exits are a
-        // separate, later experiment.
-        // At the default threshold of 0.5, confidentUp reduces to
-        // PredictedLabel == true, i.e. no filtering — prior behavior.
+        // Confidence thresholding (Checkpoint 2, entry-filtering):
+        // Probability = P(PredictedLabel == true), consistent across trainers.
+        // Scope: entries only. Buys require confidentUp;
+        // exits remain raw PredictedLabel to isolate entry effect.
+        // Probability-aware exits are a later experiment.
+        // At threshold 0.5, confidentUp == PredictedLabel (no filtering).
         bool confidentUp =
             prediction.Probability >= _confidenceThreshold;
         bool confidentDown =
@@ -177,8 +178,9 @@ public sealed class MlStrategy : IStrategy
         // exitThreshold of 0.5f this condition is a no-op — Probability < 0.5
         // already coincides with PredictedLabel == false in the normal case
         // — so behavior is identical to the original label-flip-only exit.
-        bool shouldExitOnWeakConfidence = 
-            hasPosition && prediction.Probability < _exitThreshold;
+        bool shouldExitOnWeakConfidence = hasPosition && 
+            _exitThreshold is { } threshold &&
+            prediction.Probability < threshold;
 
         if (confidentUp && !hasPosition)
         {
@@ -326,7 +328,7 @@ public sealed class MlStrategy : IStrategy
             }
             else
             {
-                reason = "No positiion to exit";
+                reason = "No position to exit";
             }
 
             if (_diagnosticMode)
