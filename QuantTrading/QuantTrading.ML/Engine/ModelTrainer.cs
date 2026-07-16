@@ -74,12 +74,12 @@ public sealed class ModelTrainer
                 ITransformer trainedModel =
                     fullPipeline.Fit(trainDataView);
 
-                IDataView predictions = 
+                IDataView predictions =
                     trainedModel.Transform(testDataView);
                 var metrics = _mlContext.BinaryClassification
                     .Evaluate(predictions, labelColumnName: labelColumn);
 
-                if(metrics.AreaUnderRocCurve > highestAuc)
+                if (metrics.AreaUnderRocCurve > highestAuc)
                 {
                     highestAuc = metrics.AreaUnderRocCurve;
                     winningModelName = algo.Key;
@@ -94,10 +94,11 @@ public sealed class ModelTrainer
             }
         }
 
-       if (bestModel != null)
+        if (bestModel != null)
         {
+            //string _bestModelPath = $"{symbol}_{featureName}_best_model.zip";
             string _bestModelPath = 
-                $"{symbol}_{featureName}_best_model.zip";
+                Path.Combine(AppContext.BaseDirectory, $"{symbol}_{featureName}_best_model.zip");
             _mlContext.Model.Save(
                 bestModel,
                 trainDataView.Schema,
