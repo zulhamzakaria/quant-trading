@@ -214,6 +214,90 @@ public sealed class FeatureGenerator
         if (start < 1)
             start = 1;
 
+        List<decimal> plusDMList = new();
+        List<decimal> minusDMList = new();
+        List<decimal> trList = new();
+
+        for (int i = start; i <= index; i++)
+        {
+            decimal upMove = bars[i].High - bars[i - 1].High;
+            decimal downMove = bars[i - 1].Low - bars[i].Low;
+            decimal plusDM =
+                (upMove > downMove && upMove > 0)
+                ? upMove
+                : 0m;
+            decimal minusDM =
+                (downMove > upMove && downMove > 0)
+                ? downMove
+                : 0m;
+            plusDMList.Add(plusDM);
+            minusDMList.Add(minusDM);
+            decimal tr =
+                CalculateTrueRange(bars[i], bars[i - 1]);
+            trList.Add(tr);
+        }
+
+        int plusDMListCount = plusDMList.Count;
+        if (plusDMListCount < AdxPeriod)
+            return 0m;
+
+        decimal avgPlusDM = 0m, avgMinusDM = 0m, avgTR = 0m;
+        for (int k = 0; k < AdxPeriod; k++)
+        {
+            avgPlusDM += plusDMList[k];
+            avgMinusDM += minusDMList[k];
+            avgTR += trList[k];
+        }
+        avgPlusDM /= AdxPeriod;
+        avgMinusDM /= AdxPeriod;
+        avgTR /= AdxPeriod;
+
+        List<decimal> dxList = new();
+        dxList.Add
+            (CalculateDx(avgPlusDM, avgMinusDM, avgTR));
+
+        for (int m = AdxPeriod; m < plusDMListCount; m++)
+        {
+            avgPlusDM =
+                ((avgPlusDM * (AdxPeriod - 1)) + plusDMList[m]) / AdxPeriod;
+            avgMinusDM =
+                ((avgMinusDM * (AdxPeriod - 1)) + minusDMList[m]) / AdxPeriod;
+            avgTR =
+                ((avgTR * (AdxPeriod - 1)) + trList[m]) / AdxPeriod;
+        }
+
+        if (dxList.Count >= AdxPeriod)
+        {
+            decimal avgDx = 0m;
+            for (int k = 0; k < AdxPeriod; k++)
+                avgDx += dxList[k];
+            avgDx /= AdxPeriod;
+
+            for (int k = AdxPeriod; k < dxList.Count; k++)
+                avgDx = ((avgDx * (AdxPeriod - 1)) +
+                    dxList[k]) / AdxPeriod;
+
+            return avgDx;
+        }
+        // Fewer than 14 DX values available — degrade gracefully to a
+        // simple average instead of a full Wilder smooth.
+        return dxList.Average();
+    }
+
+    private decimal CalculateDx(
+        decimal avgPlusDM,
+        decimal avgMinusDM,
+        decimal avgTR)
+    {
+        decimal plusDi =
+            avgTR != 0 ? 100m * avgPlusDM / avgTR : 0m;
+        decimal minusDi =
+            avgTR != 0 ? 100m * avgMinusDM / avgTR : 0m;
+
+        decimal diSum = plusDi * minusDi;
+        return diSum != 0
+            ? 100m * Math.Abs(plusDi - minusDi) / diSum
+            : 0m;
     }
 
     private static TrainingRow ToTrainingRow
