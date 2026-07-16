@@ -45,5 +45,5 @@ public enum FeatureSetType
 {
     Base,
     Rsi,
-    BaseADX
+    BaseAdx
 }
