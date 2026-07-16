@@ -57,7 +57,7 @@ class Program
             new MaCrossStrategy(),
             new RsiStrategy(),
             new BollingerBandsStrategy(),
-            new MlStrategy(ModelPath)
+            new MlStrategy(DefaultModelPath)
         };
 
         var results = runner.Run(strats, historicalData);
