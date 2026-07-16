@@ -22,8 +22,8 @@ class Program
         switch (mode)
         {
             case "simulate":
-                string modelPath = args.Length > 1 
-                    ? args[1] 
+                string modelPath = args.Length > 1
+                    ? args[1]
                     : DefaultModelPath;
                 RunSimulation(modelPath);
                 break;
@@ -41,8 +41,13 @@ class Program
 
     private static void RunSimulation(string modelPath)
     {
+        string resolvedCsvPath = 
+            Path.Combine(AppContext.BaseDirectory, CsvPath);
+        string resolvedModelPath =
+            Path.Combine(AppContext.BaseDirectory, modelPath);
+
         LocalCsvParser parser = new();
-        var historicalData = parser.ParseFile(CsvPath);
+        var historicalData = parser.ParseFile(resolvedCsvPath);
 
         Console.WriteLine($"Parsed {historicalData.Count} " +
             $"rows of historical data from {CsvPath}.");
@@ -57,7 +62,7 @@ class Program
             new MaCrossStrategy(),
             new RsiStrategy(),
             new BollingerBandsStrategy(),
-            new MlStrategy(modelPath)
+            new MlStrategy(resolvedModelPath)
         };
 
         var results = runner.Run(strats, historicalData);
