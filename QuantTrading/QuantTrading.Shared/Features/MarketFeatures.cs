@@ -12,4 +12,5 @@ public sealed record MarketFeatures(
     decimal BollingerStdDev20,
     decimal Return1D,
     decimal Return5D,
-    decimal VolumeRatio);
+    decimal VolumeRatio,
+    decimal Adx14);
