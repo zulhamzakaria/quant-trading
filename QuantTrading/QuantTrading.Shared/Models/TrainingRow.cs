@@ -24,7 +24,8 @@ public sealed class TrainingRow
     public bool IsTomorrowCloseHigher { get; set; }
     [ColumnName("BollingerStdDev20")]
     public float BollingerStdDev20 { get; set; }
-
+    [ColumnName("Adx14")]
+    public float Adx14 { get; set; }
     public static TrainingRow FromMarketFeatures(MarketFeatures features)
     {
         return new TrainingRow
@@ -37,6 +38,7 @@ public sealed class TrainingRow
             Rsi14 = (float)features.Rsi14,
             AtrRatio14 = (float)features.AtrRatio14,
             BollingerStdDev20 = (float)features.BollingerStdDev20,
+            Adx14 = (float)features.Adx14,
             IsTomorrowCloseHigher = false
         };
     }
