@@ -185,6 +185,8 @@ public sealed class FeatureGenerator
             : 0m;
 
         decimal adx14 = CalculateAdx14(bars, index);
+        decimal obvDeviation20 =
+            CalculateObvDeviation20(bars, index);
 
         return new MarketFeatures(
             Symbol: current.Symbol,
@@ -199,7 +201,49 @@ public sealed class FeatureGenerator
             Return1D: return1D,
             Return5D: return5D,
             VolumeRatio: volumeRatio,
-            Adx14: adx14);
+            Adx14: adx14,
+            ObvDeviation20: obvDeviation20);
+    }
+
+    // OBV Deviation (20-day): normalized On-Balance Volume.
+    // Raw OBV is cumulative and history-dependent, so not exposed directly.
+    // We subtract its 20-day SMA to remove long-term drift, then divide by
+    // 20-day average volume for cross-symbol comparability. No extra scaling
+    // (e.g. ×20 or ÷√20) is applied since current tree-based models (FastTree,
+    // FastForest) are insensitive to monotonic rescaling. Revisit scaling only
+    // if OBV proves useful in later experiments.
+    private decimal CalculateObvDeviation20
+        (IReadOnlyList<MarketData> bars, int index)
+    {
+        const int window = 20;
+        if (index < window)
+            return 0m;
+
+        var obv = new decimal[index + 1];
+        for (int i = 1; i <= index; i++)
+        {
+            if (bars[i].Close > bars[i - 1].Close)
+                obv[i] = obv[i - 1] + bars[i].Volume;
+            else if (bars[i].Close < bars[i - 1].Close)
+                obv[i] = obv[i - 1] - bars[i].Volume;
+            else
+                obv[i] = obv[i - 1];
+        }
+
+        decimal sumObv20 = 0m;
+        decimal sumVolume20 = 0m;
+        for (int j = 0; j < window; j++)
+        {
+            sumObv20 += obv[index - j];
+            sumVolume20 += bars[index - j].Volume;
+        }
+
+        decimal smaObv20 = sumObv20 / window;
+        decimal smaVol20 = sumVolume20 / window;
+
+        return smaVol20 !=0
+            ? (obv[index] - smaObv20) / smaVol20
+            : 0m;
     }
 
     // ADX(14): trend strength, direction-agnostic. Double Wilder smoothing
