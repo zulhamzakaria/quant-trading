@@ -33,6 +33,9 @@ class Program
             case "train-adx-aapl":
                 new AdxAaplExperiment().Run();
                 break;
+            case "train-obv-aapl":
+                new ObvAaplExperiment().Run();
+                break;
             default:
                 PrintUsage();
                 break;
@@ -78,7 +81,7 @@ class Program
         Console.WriteLine($"                         modelPath defaults to '{DefaultModelPath}' if omitted.");
         Console.WriteLine("  train-all              Run ResearchRunner's full multi-symbol Base/Rsi pipeline.");
         Console.WriteLine("  train-adx-aapl         Train the AAPL BaseAdx feature set (Checkpoint 2 experiment).");
-
+        Console.WriteLine("  train-obv-aapl         Train the AAPL BaseObv feature set (Checkpoint 2 experiment).");
     }
 
 }
