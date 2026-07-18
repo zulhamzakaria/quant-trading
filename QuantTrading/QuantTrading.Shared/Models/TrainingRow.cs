@@ -28,6 +28,8 @@ public sealed class TrainingRow
     public float Adx14 { get; set; }
     [ColumnName("ObvDeviation20")]
     public float ObvDeviation20 { get; set; }
+    [ColumnName("PriceZScore20")]
+    public float PriceZScore20 { get; set; }
     public static TrainingRow FromMarketFeatures(MarketFeatures features)
     {
         return new TrainingRow
@@ -42,6 +44,7 @@ public sealed class TrainingRow
             BollingerStdDev20 = (float)features.BollingerStdDev20,
             Adx14 = (float)features.Adx14,
             ObvDeviation20 = (float)features.ObvDeviation20,
+            PriceZScore20 = (float)features.PriceZScore20,
             IsTomorrowCloseHigher = false
         };
     }

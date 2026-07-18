@@ -14,4 +14,5 @@ public sealed record MarketFeatures(
     decimal Return5D,
     decimal VolumeRatio,
     decimal Adx14,
-    decimal ObvDeviation20);
+    decimal ObvDeviation20,
+    decimal PriceZScore20);

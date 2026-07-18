@@ -357,6 +357,8 @@ public sealed class FeatureGenerator
             Rsi14 = (float)features.Rsi14,
             AtrRatio14 = (float)features.AtrRatio14,
             BollingerStdDev20 = (float)features.BollingerStdDev20,
+            Adx14 = (float)features.Adx14,
+            ObvDeviation20 = (float)features.ObvDeviation20,
             IsTomorrowCloseHigher = isTomorrowCloseHigher
         };
     }

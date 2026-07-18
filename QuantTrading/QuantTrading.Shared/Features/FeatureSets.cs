@@ -49,6 +49,19 @@ public static class FeatureSets
         nameof(TrainingRow.AtrRatio14),
         nameof(TrainingRow.ObvDeviation20)
     };
+
+    // to check on if these adx and obv are complementary
+    public static readonly string[] BaseAdxObvFeatures =
+    {
+        nameof(TrainingRow.Return1D),
+        nameof(TrainingRow.Return5D),
+        nameof(TrainingRow.Sma5Ratio),
+        nameof(TrainingRow.Sma20Ratio),
+        nameof(TrainingRow.VolumeRatio),
+        nameof(TrainingRow.AtrRatio14),
+        nameof(TrainingRow.Adx14),
+        nameof(TrainingRow.ObvDeviation20)
+    };
 }
 
 
@@ -57,5 +70,6 @@ public enum FeatureSetType
     Base,
     Rsi,
     BaseAdx,
-    BaseObv
+    BaseObv,
+    BaseAdxObv
 }
