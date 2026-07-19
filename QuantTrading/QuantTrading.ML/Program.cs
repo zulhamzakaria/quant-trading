@@ -36,6 +36,9 @@ class Program
             case "train-obv-aapl":
                 new ObvAaplExperiment().Run();
                 break;
+            case "train-adx-obv-aapl":
+                new AdxObvAaplExperiment().Run();
+                break;
             default:
                 PrintUsage();
                 break;
@@ -82,6 +85,7 @@ class Program
         Console.WriteLine("  train-all              Run ResearchRunner's full multi-symbol Base/Rsi pipeline.");
         Console.WriteLine("  train-adx-aapl         Train the AAPL BaseAdx feature set (Checkpoint 2 experiment).");
         Console.WriteLine("  train-obv-aapl         Train the AAPL BaseObv feature set (Checkpoint 2 experiment).");
+        Console.WriteLine("  train-adx-obv-aapl     Train the AAPL BaseAdxObv combined feature set (Checkpoint 2).");
     }
 
 }

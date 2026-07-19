@@ -8,6 +8,9 @@ public sealed class FeatureGenerator
     private const int MinBarRequired = 22;
     private const int AdxPeriod = 14;
 
+    // shared among some of the indicators
+    private const int StandardWindow = 20;
+
     public IReadOnlyList<TrainingRow> ComputeTrainingRows
         (IReadOnlyList<MarketData> bars)
     {
@@ -187,6 +190,11 @@ public sealed class FeatureGenerator
         decimal adx14 = CalculateAdx14(bars, index);
         decimal obvDeviation20 =
             CalculateObvDeviation20(bars, index);
+        decimal priceZScore20 =
+            bollingerStdDev20 != 0
+            ? (current.Close - sma20) / bollingerStdDev20
+            : 0m;
+
 
         return new MarketFeatures(
             Symbol: current.Symbol,
@@ -202,7 +210,8 @@ public sealed class FeatureGenerator
             Return5D: return5D,
             VolumeRatio: volumeRatio,
             Adx14: adx14,
-            ObvDeviation20: obvDeviation20);
+            ObvDeviation20: obvDeviation20,
+            PriceZScore20: priceZScore20 );
     }
 
     // OBV Deviation (20-day): normalized On-Balance Volume.
@@ -215,8 +224,8 @@ public sealed class FeatureGenerator
     private decimal CalculateObvDeviation20
         (IReadOnlyList<MarketData> bars, int index)
     {
-        const int window = 20;
-        if (index < window)
+
+        if (index < StandardWindow)
             return 0m;
 
         var obv = new decimal[index + 1];
@@ -232,14 +241,14 @@ public sealed class FeatureGenerator
 
         decimal sumObv20 = 0m;
         decimal sumVolume20 = 0m;
-        for (int j = 0; j < window; j++)
+        for (int j = 0; j < StandardWindow; j++)
         {
             sumObv20 += obv[index - j];
             sumVolume20 += bars[index - j].Volume;
         }
 
-        decimal smaObv20 = sumObv20 / window;
-        decimal smaVol20 = sumVolume20 / window;
+        decimal smaObv20 = sumObv20 / StandardWindow;
+        decimal smaVol20 = sumVolume20 / StandardWindow;
 
         return smaVol20 !=0
             ? (obv[index] - smaObv20) / smaVol20
@@ -297,8 +306,7 @@ public sealed class FeatureGenerator
         avgTR /= AdxPeriod;
 
         List<decimal> dxList = new();
-        dxList.Add
-            (CalculateDx(avgPlusDM, avgMinusDM, avgTR));
+        dxList.Add(CalculateDx(avgPlusDM, avgMinusDM, avgTR));
 
         for (int m = AdxPeriod; m < plusDMListCount; m++)
         {
@@ -359,6 +367,7 @@ public sealed class FeatureGenerator
             BollingerStdDev20 = (float)features.BollingerStdDev20,
             Adx14 = (float)features.Adx14,
             ObvDeviation20 = (float)features.ObvDeviation20,
+            PriceZScore20 = (float)features.PriceZScore20,
             IsTomorrowCloseHigher = isTomorrowCloseHigher
         };
     }
