@@ -285,7 +285,7 @@ public sealed class FeatureGenerator
                 : 0m;
             plusDMList.Add(plusDM);
             minusDMList.Add(minusDM);
-            decimal tr =
+            decimal tr = 
                 CalculateTrueRange(bars[i], bars[i - 1]);
             trList.Add(tr);
         }
