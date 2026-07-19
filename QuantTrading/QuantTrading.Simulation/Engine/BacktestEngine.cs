@@ -29,6 +29,9 @@ public sealed class BacktestEngine
     private readonly Dictionary<string, List<MarketData>>
         _barHistory = new(StringComparer.OrdinalIgnoreCase);
 
+    // for data collection only; 
+    private readonly Dictionary<IStrategy, List<(DateTime Timestamp, decimal Equity)>>
+        _equityCurves = new();
     public void RegisterStrategy(
         IStrategy strategy,
         decimal startingCash,
@@ -54,6 +57,8 @@ public sealed class BacktestEngine
         _entryPrices[strategy] =
             new Dictionary<string, (decimal, DateTime)>
             (StringComparer.OrdinalIgnoreCase);
+        _equityCurves[strategy] =
+            new List<(DateTime Timestamp, decimal Equity)>();
     }
 
     public void RunSimulation
@@ -132,6 +137,14 @@ public sealed class BacktestEngine
                 }
 
                 _pendingOrders[strategy] = request;
+            }
+
+            for (int i = 0; i < _strategies.Count; i++)
+            {
+                var strategy = _strategies[i];
+                decimal equity =
+                    CalculateCurrentPortfolioValue(strategy);
+                _equityCurves[strategy].Add((bar.Timestamp, equity));
             }
         }
 
@@ -244,6 +257,22 @@ public sealed class BacktestEngine
         }
 
         return account.Cash + inventoryValue;
+    }
+
+    // Equity curve uses CalculateCurrentPortfolioValue, which prices via
+    // _latestPrices (updated only for the current bar’s symbol). Works for
+    // single-symbol data; multi-symbol requires a full pricing model (Phase 5).
+    // This is an existing limitation, not a new issue.
+    public IReadOnlyList<(DateTime Timestamp, decimal Equity)> GetEquityCurve
+            (IStrategy strategy)
+    {
+        if (strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+        if (!_equityCurves.TryGetValue(strategy, out var curve))
+            throw new KeyNotFoundException(
+                "No equity curve found for the provided strategy instance.");
+
+        return curve.AsReadOnly();
     }
 
     public IReadonlyAccountState GetAccountState
