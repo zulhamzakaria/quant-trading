@@ -39,6 +39,9 @@ class Program
             case "train-adx-obv-aapl":
                 new AdxObvAaplExperiment().Run();
                 break;
+            case "train-pricezscore-aapl":
+                new PriceZScoreAaplExperiment().Run();
+                break;
             default:
                 PrintUsage();
                 break;
@@ -86,6 +89,7 @@ class Program
         Console.WriteLine("  train-adx-aapl         Train the AAPL BaseAdx feature set (Checkpoint 2 experiment).");
         Console.WriteLine("  train-obv-aapl         Train the AAPL BaseObv feature set (Checkpoint 2 experiment).");
         Console.WriteLine("  train-adx-obv-aapl     Train the AAPL BaseAdxObv combined feature set (Checkpoint 2).");
+        Console.WriteLine("  train-pricezscore-aapl Train AAPL BaseObv+PriceZScore20 vs. the Base+OBV champion.");
     }
 
 }
