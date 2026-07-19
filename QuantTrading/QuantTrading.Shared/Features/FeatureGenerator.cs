@@ -18,7 +18,7 @@ public sealed class FeatureGenerator
         if (bars is null || bars.Count < MinBarRequired)
             return featureList;
 
-        for (int i = 20; i < bars.Count - 1; i++)
+        for (int i = StandardWindow; i < bars.Count - 1; i++)
         {
             var features = ComputeMarketFeaturesAt(bars, i);
             if (features is null)
@@ -63,7 +63,7 @@ public sealed class FeatureGenerator
         (IReadOnlyList<MarketData> bars, int index)
     {
 
-        if (index < 20 || index >= bars.Count)
+        if (index < StandardWindow || index >= bars.Count)
             return null;
 
         var current = bars[index];

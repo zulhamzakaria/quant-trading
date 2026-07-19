@@ -62,6 +62,18 @@ public static class FeatureSets
         nameof(TrainingRow.Adx14),
         nameof(TrainingRow.ObvDeviation20)
     };
+
+    public static readonly string[] BaseObvPriceZScoreFeatures =
+    {
+        nameof(TrainingRow.Return1D),
+        nameof(TrainingRow.Return5D),
+        nameof(TrainingRow.Sma5Ratio),
+        nameof(TrainingRow.Sma20Ratio),
+        nameof(TrainingRow.VolumeRatio),
+        nameof(TrainingRow.AtrRatio14),
+        nameof(TrainingRow.ObvDeviation20),
+        nameof(TrainingRow.PriceZScore20)
+    };
 }
 
 
@@ -71,5 +83,6 @@ public enum FeatureSetType
     Rsi,
     BaseAdx,
     BaseObv,
-    BaseAdxObv
+    BaseAdxObv,
+    BaseObvPriceZScore
 }
