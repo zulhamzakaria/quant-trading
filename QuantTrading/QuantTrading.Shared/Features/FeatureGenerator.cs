@@ -93,21 +93,21 @@ public sealed class FeatureGenerator
 
         // 20-day SMA
         decimal sumClose20 = 0m;
-        for (int j = 0; j < 20; j++)
+        for (int j = 0; j < StandardWindow; j++)
         {
             sumClose20 += bars[index - j].Close;
         }
-        decimal sma20 = sumClose20 / 20m;
+        decimal sma20 = sumClose20 / StandardWindow;
 
         // 20-day Standard Deviation (for Bollinger Bands)
         decimal sumSquaredDiff20 = 0m;
-        for (int j = 0; j < 20; j++)
+        for (int j = 0; j < StandardWindow; j++)
         {
             decimal diff = bars[index - j].Close - sma20;
             sumSquaredDiff20 += diff * diff;
         }
         decimal bollingerStdDev20 =
-            (decimal)Math.Sqrt((double)(sumSquaredDiff20 / 20m));
+            (decimal)Math.Sqrt((double)(sumSquaredDiff20 / StandardWindow));
 
         decimal sma5Ratio =
             sma5 != 0 ? current.Close / sma5 : 1.0m;
@@ -211,7 +211,7 @@ public sealed class FeatureGenerator
             VolumeRatio: volumeRatio,
             Adx14: adx14,
             ObvDeviation20: obvDeviation20,
-            PriceZScore20: priceZScore20 );
+            PriceZScore20: priceZScore20);
     }
 
     // OBV Deviation (20-day): normalized On-Balance Volume.
@@ -221,7 +221,7 @@ public sealed class FeatureGenerator
     // (e.g. ×20 or ÷√20) is applied since current tree-based models (FastTree,
     // FastForest) are insensitive to monotonic rescaling. Revisit scaling only
     // if OBV proves useful in later experiments.
-    private decimal CalculateObvDeviation20
+    private static decimal CalculateObvDeviation20
         (IReadOnlyList<MarketData> bars, int index)
     {
 
@@ -250,7 +250,7 @@ public sealed class FeatureGenerator
         decimal smaObv20 = sumObv20 / StandardWindow;
         decimal smaVol20 = sumVolume20 / StandardWindow;
 
-        return smaVol20 !=0
+        return smaVol20 != 0
             ? (obv[index] - smaObv20) / smaVol20
             : 0m;
     }
@@ -260,7 +260,7 @@ public sealed class FeatureGenerator
     // long-memory smoothing needs ~200 bars to converge. Shorter (e.g. 27)
     // diverges (MAE ~9, max ~42). At 200, error ~0; earlier values are warm-up.
     private const int AdxWindowSize = 200;
-    private decimal CalculateAdx14
+    private static decimal CalculateAdx14
         (IReadOnlyList<MarketData> bars, int index)
     {
         int start = index - (AdxWindowSize - 1);
@@ -285,7 +285,7 @@ public sealed class FeatureGenerator
                 : 0m;
             plusDMList.Add(plusDM);
             minusDMList.Add(minusDM);
-            decimal tr = 
+            decimal tr =
                 CalculateTrueRange(bars[i], bars[i - 1]);
             trList.Add(tr);
         }
@@ -316,6 +316,9 @@ public sealed class FeatureGenerator
                 ((avgMinusDM * (AdxPeriod - 1)) + minusDMList[m]) / AdxPeriod;
             avgTR =
                 ((avgTR * (AdxPeriod - 1)) + trList[m]) / AdxPeriod;
+
+            dxList.Add(CalculateDx(avgPlusDM, avgMinusDM, avgTR));
+
         }
 
         if (dxList.Count >= AdxPeriod)
@@ -336,7 +339,7 @@ public sealed class FeatureGenerator
         return dxList.Average();
     }
 
-    private decimal CalculateDx(
+    private static decimal CalculateDx(
         decimal avgPlusDM,
         decimal avgMinusDM,
         decimal avgTR)
@@ -346,7 +349,7 @@ public sealed class FeatureGenerator
         decimal minusDi =
             avgTR != 0 ? 100m * avgMinusDM / avgTR : 0m;
 
-        decimal diSum = plusDi * minusDi;
+        decimal diSum = plusDi + minusDi;
         return diSum != 0
             ? 100m * Math.Abs(plusDi - minusDi) / diSum
             : 0m;
