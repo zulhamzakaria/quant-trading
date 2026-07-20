@@ -66,9 +66,8 @@ public sealed class TournamentRunner
 
         foreach (var strategy in strategies)
         {
-            decimal endingValue =
-                engine.CalculateCurrentPortfolioValue
-                (strategy);
+            var equityCurve = engine.GetEquityCurve(strategy);
+            decimal endingValue = equityCurve[^1].Equity;
 
             results.Add(new StrategyResult
                 (StrategyName: strategy.Name,
@@ -76,7 +75,8 @@ public sealed class TournamentRunner
                 StartingCapital: _startingCapital,
                 EndingPortfolioValue: endingValue,
                 FirstBarTimestamp: firstBar,
-                LastBarTimestamp: lastBar));
+                LastBarTimestamp: lastBar,
+                EquityCurve:equityCurve));
         }
 
         return results;

@@ -30,7 +30,7 @@ public sealed class BacktestEngine
         _barHistory = new(StringComparer.OrdinalIgnoreCase);
 
     // for data collection only; 
-    private readonly Dictionary<IStrategy, List<(DateTime Timestamp, decimal Equity)>>
+    private readonly Dictionary<IStrategy, List<EquityPoint>>
         _equityCurves = new();
     public void RegisterStrategy(
         IStrategy strategy,
@@ -58,7 +58,7 @@ public sealed class BacktestEngine
             new Dictionary<string, (decimal, DateTime)>
             (StringComparer.OrdinalIgnoreCase);
         _equityCurves[strategy] =
-            new List<(DateTime Timestamp, decimal Equity)>();
+            new List<EquityPoint>();
     }
 
     public void RunSimulation
@@ -142,9 +142,9 @@ public sealed class BacktestEngine
             for (int i = 0; i < _strategies.Count; i++)
             {
                 var strategy = _strategies[i];
-                decimal equity =
+                decimal equity = 
                     CalculateCurrentPortfolioValue(strategy);
-                _equityCurves[strategy].Add((bar.Timestamp, equity));
+                _equityCurves[strategy].Add(new (bar.Timestamp, equity));
             }
         }
 
@@ -263,7 +263,7 @@ public sealed class BacktestEngine
     // _latestPrices (updated only for the current bar’s symbol). Works for
     // single-symbol data; multi-symbol requires a full pricing model (Phase 5).
     // This is an existing limitation, not a new issue.
-    public IReadOnlyList<(DateTime Timestamp, decimal Equity)> GetEquityCurve
+    public IReadOnlyList<EquityPoint> GetEquityCurve
             (IStrategy strategy)
     {
         if (strategy is null)
