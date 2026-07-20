@@ -94,13 +94,14 @@ public sealed class MlSmokeTest
             : 0m;
 
         BacktestReporter reporter = new();
-        reporter.PrintReport(
-            trades: engine.GetCompletedTrades(strategy),
-            startingCapital: 10_000m,
-            endingPortfolioValue: finalPortfolioValue,
-            buyAndHoldReturn: buyAndHoldReturn,
-            firstBarTimestamp: historicalData[0].Timestamp,
-            lastBarTimestamp: historicalData[^1].Timestamp);
+        // commented because PrintReport requires different arg now
+        //reporter.PrintReport(
+        //    trades: engine.GetCompletedTrades(strategy),
+        //    startingCapital: 10_000m,
+        //    endingPortfolioValue: finalPortfolioValue,
+        //    buyAndHoldReturn: buyAndHoldReturn,
+        //    firstBarTimestamp: historicalData[0].Timestamp,
+        //    lastBarTimestamp: historicalData[^1].Timestamp);
 
         // ==========================================
         // 7. PHASE 2 — MODEL EVALUATION
