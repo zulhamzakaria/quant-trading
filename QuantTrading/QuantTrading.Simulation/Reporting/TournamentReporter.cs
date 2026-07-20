@@ -13,7 +13,7 @@ public sealed class TournamentReporter
     // to one or two lucky trades"). No formal minimum has been agreed yet;
     // this exists only so the flag has *some* threshold to render. Replace
     // once a real value is decided as part of Checkpoint 1.
-    private const int ProvisionalMinimumTradeThreshold = 10;
+    private const int ProvisionalMinimumTradesThreshold = 10;
     public void PrintReport
         (IReadOnlyList<StrategyResult> results)
     {
@@ -24,18 +24,31 @@ public sealed class TournamentReporter
                 nameof(results));
         }
 
-        decimal buyAndHoldReturn = results
-            .FirstOrDefault(r => r.StrategyName == "Buy & Hold")?
-            .TotalReturn ?? 0m;
+        var buyAndHoldResult = results
+            .FirstOrDefault(r => r.StrategyName == "Buy & Hold");
+        decimal buyAndHoldReturn =
+            buyAndHoldResult?.TotalReturn ?? 0m;
+        if (buyAndHoldResult is null)
+            Console.WriteLine("[NOTE] 'Buy & Hold' not present in this run — benchmark comparisons below are against 0%, not a real baseline.");
 
-        foreach (var result in results)
+        var allMetrics = results
+            .Select(r => (Result: r, Metrics: MetricsCalculator.Calculate(
+                r.Trades,
+                r.StartingCapital,
+                r.EndingPortfolioValue,
+                r.FirstBarTimestamp,
+                r.LastBarTimestamp,
+                r.EquityCurve)))
+            .ToList();
+
+        foreach (var (result, metrics) in allMetrics)
         {
             Console.WriteLine();
             Console.WriteLine($"Strategy: {result.StrategyName}");
             Console.WriteLine();
 
             _backtestReporter.PrintReport(
-                result.Trades,
+                metrics,
                 result.StartingCapital,
                 result.EndingPortfolioValue,
                 buyAndHoldReturn,
@@ -43,11 +56,11 @@ public sealed class TournamentReporter
                 result.LastBarTimestamp);
         }
 
-        PrintComparativeSummary(results);
+        PrintComparativeSummary(allMetrics);
     }
 
     private void PrintComparativeSummary
-        (IReadOnlyList<StrategyResult> results)
+        (List<(StrategyResult Result, StrategyMetrics Metrics)> allMetrics)
     {
         Console.WriteLine();
         Console.WriteLine("========== Tournament Summary ==========");
@@ -64,14 +77,9 @@ public sealed class TournamentReporter
         Console.WriteLine(new string('-', 100));
 
         //rank is based on CAGR
-        var ranked = results
-            .Select(r => (Result: r, Metrics: MetricsCalculator.Calculate(
-                r.Trades,
-                r.StartingCapital,
-                r.EndingPortfolioValue,
-                r.FirstBarTimestamp,
-                r.LastBarTimestamp)))
+        var ranked = allMetrics
             .OrderByDescending(x => double.IsNaN(x.Metrics.Cagr) ? double.MinValue : x.Metrics.Cagr);
+
 
         foreach (var (result, metrics) in ranked)
         {
@@ -80,18 +88,22 @@ public sealed class TournamentReporter
                 ? "N/A"
                 : $"{metrics.Cagr:F2}%";
             string tradeCountCol =
-                metrics.TradeCount < ProvisionalMinimumTradeThreshold
+                metrics.TradeCount < ProvisionalMinimumTradesThreshold
                 ? $"{metrics.TradeCount}*"
                 : $"{metrics.TradeCount}";
 
             if (metrics.TradeCount == 0)
             {
                 string zeroTradeReturnCol = $"{metrics.TotalReturn:F2}%";
+                string zeroTradeDrawdownCol = 
+                    metrics.MaxDrawdownPercent.HasValue
+                    ? $"{metrics.MaxDrawdownPercent:F2}%"
+                    : "N/A";
                 Console.WriteLine(
                     $"{result.StrategyName,-22} " +
                     $"{zeroTradeReturnCol,-14} " +
                     $"{cagrCol,-10} {tradeCountCol,-8} " +
-                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {"N/A"}");
+                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {zeroTradeDrawdownCol}");
                 continue;
             }
 
@@ -103,16 +115,20 @@ public sealed class TournamentReporter
                 ? $"{metrics.Expectancy.Value:F2}"
                 : "N/A";
             string totalReturnCol = $"{metrics.TotalReturn:F2}%";
+            string drawdownCol = 
+                metrics.MaxDrawdownPercent.HasValue
+                ? $"{metrics.MaxDrawdownPercent:F2}%"
+                : "N/A";
 
             Console.WriteLine(
                 $"{result.StrategyName,-22} " +
                 $"{totalReturnCol,-14} " +
                 $"{cagrCol,-10} {tradeCountCol,-8} " +
-                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} n/a");
+                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} {drawdownCol}");
         }
 
         Console.WriteLine();
-        Console.WriteLine("[NOTE] Max Drawdown requires mark-to-market equity curve — not yet available.");
+        Console.WriteLine($"[NOTE] '*' next to trade count indicates fewer than {ProvisionalMinimumTradesThreshold} trades — low sample size, treat results cautiously. Threshold is PROVISIONAL, not yet formally decided.");
         Console.WriteLine("========================================");
     }
 }

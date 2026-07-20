@@ -1,26 +1,17 @@
 ﻿using QuantTrading.Simulation.Analytics;
-using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Reporting;
 
 public sealed class BacktestReporter
 {
     public void PrintReport(
-        IReadOnlyList<CompletedTrade> trades,
+        StrategyMetrics metrics,
         decimal startingCapital,
         decimal endingPortfolioValue,
         decimal buyAndHoldReturn,
         DateTime firstBarTimestamp,
         DateTime lastBarTimestamp)
     {
-
-        var metrics = MetricsCalculator.Calculate(
-            trades,
-            startingCapital,
-            endingPortfolioValue,
-            firstBarTimestamp,
-            lastBarTimestamp);
-
         Console.WriteLine();
         Console.WriteLine("========== Backtest Report ==========");
         Console.WriteLine();
@@ -35,7 +26,7 @@ public sealed class BacktestReporter
         Console.WriteLine($"Starting Capital         : {startingCapital:F2}");
         Console.WriteLine($"Ending Portfolio Value   : {endingPortfolioValue:F2}");
         Console.WriteLine($"Total Return             : {metrics.TotalReturn:F2}%");
-        Console.WriteLine($"CAGR                     : {metrics.Cagr:F2}%");
+        Console.WriteLine($"CAGR                     : {(double.IsNaN(metrics.Cagr) ? "N/A" : $"{metrics.Cagr:F2}%")}");
         Console.WriteLine();
 
         // ── Buy & Hold Benchmark ──────────────────────────────────────────
@@ -44,8 +35,15 @@ public sealed class BacktestReporter
         Console.WriteLine($"Strategy vs Benchmark    : {(metrics.TotalReturn - buyAndHoldReturn):F2}%");
         Console.WriteLine();
 
-        int tradeCount = trades.Count;
+        // Drawdown is independent of trade count (e.g. Buy & Hold has real
+        // drawdown despite zero completed trades) — printed before the
+        // trade-count branch below, not after, so it's never skipped.
+        Console.WriteLine("--- Drawdown ---");
+        Console.WriteLine(
+            $"Max Drawdown             : {(metrics.MaxDrawdownPercent.HasValue ? $"{metrics.MaxDrawdownPercent:F2}%" : "N/A")}");
+        Console.WriteLine();
 
+        int tradeCount = metrics.TradeCount;
         if (tradeCount == 0)
         {
             Console.WriteLine("--- Trade Statistics ---");
@@ -54,8 +52,6 @@ public sealed class BacktestReporter
             Console.WriteLine("=====================================");
             return;
         }
-
-
 
         Console.WriteLine("--- Trade Statistics ---");
         Console.WriteLine($"Completed Trades         : {tradeCount}");
@@ -69,11 +65,6 @@ public sealed class BacktestReporter
         Console.WriteLine($"Expectancy (per trade)   : {metrics.Expectancy:F2}");
         Console.WriteLine($"Profit Factor            : {(metrics.ProfitFactor.HasValue ? $"{metrics.ProfitFactor:F2}" : "N/A")}");
         Console.WriteLine($"Total Realized P&L       : {metrics.TotalRealizedPnL:F2}");
-        Console.WriteLine();
-
-        Console.WriteLine("--- Drawdown ---");
-        Console.WriteLine("Max Drawdown             : N/A");
-        Console.WriteLine("[NOTE] Requires mark-to-market equity curve — not yet available.");
         Console.WriteLine();
 
         Console.WriteLine("=====================================");

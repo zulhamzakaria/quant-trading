@@ -9,30 +9,34 @@ public static class MetricsCalculator
         decimal startingCapital,
         decimal endingPortfolioValue,
         DateTime firstBarTimestamp,
-        DateTime lastBarTimestamp)
+        DateTime lastBarTimestamp,
+        IReadOnlyList<EquityPoint> equityCurve)
     {
-        if(trades is null)
+        if (trades is null)
             throw new ArgumentNullException(nameof(trades));
-        if(startingCapital <= 0)
+        if (startingCapital <= 0)
             throw new ArgumentOutOfRangeException(
-                nameof(startingCapital), 
+                nameof(startingCapital),
                 "Starting capital must be greater than zero.");
 
         double totalDays =
             (lastBarTimestamp - firstBarTimestamp).TotalDays;
         double totalYears = totalDays / 365.25;
 
-        decimal totalReturn = 
+        decimal totalReturn =
             (endingPortfolioValue - startingCapital) / startingCapital * 100m;
 
         double cagr = CalculateCagr(
-            startingCapital, 
-            endingPortfolioValue, 
+            startingCapital,
+            endingPortfolioValue,
             totalYears);
+
+        decimal? maxDrawdownPercent =
+            CalculateMaxDrawdown(equityCurve);
 
         int tradeCount = trades.Count;
 
-        if(tradeCount == 0)
+        if (tradeCount == 0)
         {
             return new StrategyMetrics
             {
@@ -50,7 +54,8 @@ public static class MetricsCalculator
                 GrossProfit = 0m,
                 GrossLoss = 0m,
                 TotalRealizedPnL = 0m,
-                TotalYears = totalYears
+                TotalYears = totalYears,
+                MaxDrawdownPercent = maxDrawdownPercent,
             };
         }
 
@@ -60,26 +65,27 @@ public static class MetricsCalculator
 
         decimal winRate = (decimal)winners.Count / tradeCount * 100m;
 
-        decimal? avgGain = winners.Count > 0 
-            ? winners.Average(t => t.RealizedPnL) 
+        decimal? avgGain = winners.Count > 0
+            ? winners.Average(t => t.RealizedPnL)
             : null;
-        decimal? avgLoss = losers.Count > 0 
-            ? losers.Average(t => t.RealizedPnL) 
+        decimal? avgLoss = losers.Count > 0
+            ? losers.Average(t => t.RealizedPnL)
             : null;
 
         decimal grossProfit = winners.Sum(t => t.RealizedPnL);
         decimal grossLoss = Math.Abs(losers.Sum(t => t.RealizedPnL));
 
-        decimal? profitFactor = grossLoss > 0 
-            ? grossProfit / grossLoss 
+        decimal? profitFactor = grossLoss > 0
+            ? grossProfit / grossLoss
             : null;
 
         decimal? expectancy = null;
-        if(avgGain.HasValue || avgLoss.HasValue)
+        if (avgGain.HasValue || avgLoss.HasValue)
         {
-            decimal lossRate = (decimal)losers.Count / tradeCount;
+            decimal lossRate =
+                (decimal)losers.Count / tradeCount;
             decimal winContribution =
-                (winRate/100m) * (avgGain ?? 0m);
+                (winRate / 100m) * (avgGain ?? 0m);
             decimal lossContribution =
                 lossRate * (avgLoss ?? 0m);
             expectancy = winContribution + lossContribution;
@@ -103,8 +109,34 @@ public static class MetricsCalculator
             GrossProfit = grossProfit,
             GrossLoss = grossLoss,
             TotalRealizedPnL = totalRealizedPnL,
-            TotalYears = totalYears
+            TotalYears = totalYears,
+            MaxDrawdownPercent = maxDrawdownPercent,
         };
+    }
+
+    private static decimal? CalculateMaxDrawdown
+        (IReadOnlyList<EquityPoint> equityCurve)
+    {
+        if (equityCurve is null || equityCurve.Count == 0)
+            return null;
+
+        decimal peak = equityCurve[0].Equity;
+        decimal maxDrawdown = 0m;
+
+        foreach (var point in equityCurve)
+        {
+            if (point.Equity > peak)
+                peak = point.Equity;
+            else if (peak > 0)
+            {
+                decimal drawdown =
+                    (peak - point.Equity) / peak * 100m;
+                if(drawdown > maxDrawdown)
+                    maxDrawdown = drawdown;
+            }
+        }
+
+        return maxDrawdown;
     }
 
     private static double CalculateCagr(
@@ -112,13 +144,13 @@ public static class MetricsCalculator
         decimal endingPortfolioValue,
         double totalYears)
     {
-        if(totalYears <= 0)
+        if (totalYears <= 0)
             return 0.0;
 
-        if(endingPortfolioValue <= 0)
+        if (endingPortfolioValue <= 0)
             return double.NaN;
 
-        double ratio = 
+        double ratio =
             (double)(endingPortfolioValue / startingCapital);
         return (Math.Pow(ratio, 1.0 / totalYears) - 1.0) * 100.0;
     }

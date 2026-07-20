@@ -23,4 +23,7 @@ public sealed record StrategyMetrics
     public required decimal TotalRealizedPnL { get; init; }
 
     public required double TotalYears { get; init; }
+
+    // null if no equity data
+    public decimal? MaxDrawdownPercent {  get; init; }
 }
