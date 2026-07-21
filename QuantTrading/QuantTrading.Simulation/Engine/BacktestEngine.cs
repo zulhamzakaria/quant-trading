@@ -161,7 +161,7 @@ public sealed class BacktestEngine
                     decimal price = bar.Close;
 
                     string action = _pendingOrders.TryGetValue(strategy, out var order)
-                        ? order!.Action.ToString()
+                        ? order.Action.ToString()
                         : "-";
 
                     Console.WriteLine(
