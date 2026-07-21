@@ -146,32 +146,6 @@ public sealed class BacktestEngine
                 decimal equity =
                     CalculateCurrentPortfolioValue(strategy);
                 _equityCurves[strategy].Add(new(bar.Timestamp, equity));
-
-                //TEMP-AUDIT
-                if (bar.Timestamp >= new DateTime(2020, 3, 11) &&
-                    bar.Timestamp <= new DateTime(2020, 3, 20))
-                {
-                    var account = _strategyAccounts[strategy];
-
-                    int shares = account.ActivePositions.TryGetValue("AAPL", out var qty)
-                        ? qty
-                        : 0;
-
-                    decimal cash = account.Cash;
-                    decimal price = bar.Close;
-
-                    string action = _pendingOrders[strategy]?.Action.ToString() ?? "";
-
-                    Console.WriteLine(
-                        $"{strategy.Name} |" +
-                        $"Pending:{action} |" +
-                        $"{bar.Timestamp:yyyy-MM-dd} | " +
-                        $"Cash={cash:F2} | " +
-                        $"Shares={shares} | " +
-                        $"Price={price:F2} | " +
-                        $"Inventory={(shares * price):F2} | " +
-                        $"Equity={equity:F2}");
-                }
             }
         }
 
