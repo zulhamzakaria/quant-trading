@@ -1,4 +1,5 @@
-﻿using QuantTrading.Shared.Contracts;
+﻿using QuantTrading.Domain.Models;
+using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
@@ -142,9 +143,31 @@ public sealed class BacktestEngine
             for (int i = 0; i < _strategies.Count; i++)
             {
                 var strategy = _strategies[i];
-                decimal equity = 
+                decimal equity =
                     CalculateCurrentPortfolioValue(strategy);
-                _equityCurves[strategy].Add(new (bar.Timestamp, equity));
+                _equityCurves[strategy].Add(new(bar.Timestamp, equity));
+
+                //TEMP-AUDIT
+                if (bar.Timestamp >= new DateTime(2020, 3, 11) &&
+                    bar.Timestamp <= new DateTime(2020, 3, 20))
+                {
+                    var account = _strategyAccounts[strategy];
+
+                    int shares = account.ActivePositions.TryGetValue("AAPL", out var qty)
+                        ? qty
+                        : 0;
+
+                    decimal cash = account.Cash;
+                    decimal price = bar.Close;
+
+                    Console.WriteLine(
+                        $"{bar.Timestamp:yyyy-MM-dd} | " +
+                        $"Cash={cash:F2} | " +
+                        $"Shares={shares} | " +
+                        $"Price={price:F2} | " +
+                        $"Inventory={(shares * price):F2} | " +
+                        $"Equity={equity:F2}");
+                }
             }
         }
 
