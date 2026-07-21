@@ -160,9 +160,7 @@ public sealed class BacktestEngine
                     decimal cash = account.Cash;
                     decimal price = bar.Close;
 
-                    string action = _pendingOrders.TryGetValue(strategy, out var order)
-                        ? order.Action.ToString()
-                        : "-";
+                    string action = _pendingOrders[strategy]?.Action.ToString() ?? "";
 
                     Console.WriteLine(
                         $"{strategy.Name} |" +
