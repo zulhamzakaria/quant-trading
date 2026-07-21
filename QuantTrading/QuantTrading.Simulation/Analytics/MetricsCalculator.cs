@@ -123,18 +123,39 @@ public static class MetricsCalculator
         decimal peak = equityCurve[0].Equity;
         decimal maxDrawdown = 0m;
 
+        // TEMP-DEBUG
+        DateTime peakDate = equityCurve[0].Timestamp;
+        DateTime troughDate = equityCurve[0].Timestamp;
+        decimal troughEquity = peak;
+        DateTime bestPeakDateForTrough = peakDate;
+
         foreach (var point in equityCurve)
         {
             if (point.Equity > peak)
+            {
                 peak = point.Equity;
+                peakDate = point.Timestamp; // TEMP-DEBUG
+            }
             else if (peak > 0)
             {
                 decimal drawdown =
                     (peak - point.Equity) / peak * 100m;
-                if(drawdown > maxDrawdown)
+                if (drawdown > maxDrawdown)
+                {
                     maxDrawdown = drawdown;
+                    // TEMP-DEBUG
+                    troughDate = point.Timestamp;
+                    troughEquity = point.Equity;
+                    bestPeakDateForTrough = peakDate;
+                }
             }
         }
+
+        //TEMP-DEBUG
+        Console.WriteLine(
+         $"[DEBUG audit] MaxDD={maxDrawdown:F2}% | Peak {bestPeakDateForTrough:yyyy-MM-dd} " +
+         $"({peak:F2}) -> Trough {troughDate:yyyy-MM-dd} ({troughEquity:F2})");
+
 
         return maxDrawdown;
     }
