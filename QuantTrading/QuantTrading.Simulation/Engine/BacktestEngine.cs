@@ -161,6 +161,7 @@ public sealed class BacktestEngine
                     decimal price = bar.Close;
 
                     Console.WriteLine(
+                        $"{strategy.Name} |" +
                         $"{bar.Timestamp:yyyy-MM-dd} | " +
                         $"Cash={cash:F2} | " +
                         $"Shares={shares} | " +
