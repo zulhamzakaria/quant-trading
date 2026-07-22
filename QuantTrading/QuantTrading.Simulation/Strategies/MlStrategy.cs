@@ -54,7 +54,8 @@ public sealed class MlStrategy : IStrategy
         string action)> _predictionTable = new();
     private const int PredictionTableLimit = 20;
 
-    public string Name => "ml-directional-model";
+    private readonly string _name; 
+    public string Name => _name;
 
     public MlStrategy(
         string modelPath,
@@ -62,7 +63,8 @@ public sealed class MlStrategy : IStrategy
         bool diagnosticMode = false,
         float confidenceThreshold = 0.5f,
         float? exitThreshold = null,
-        decimal? equityAllocationPct = null)
+        decimal? equityAllocationPct = null,
+        string name = "ml-directional-model")
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -107,6 +109,7 @@ public sealed class MlStrategy : IStrategy
         _diagnosticMode = diagnosticMode;
         _confidenceThreshold = confidenceThreshold;
         _exitThreshold = exitThreshold;
+        _name = name;
 
         // Initialize ML.NET Context with set evaluation seeds
         var mlContext = new MLContext(seed: 42);

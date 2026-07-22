@@ -50,7 +50,7 @@ class Program
 
     private static void RunSimulation(string modelPath)
     {
-        string resolvedCsvPath = 
+        string resolvedCsvPath =
             Path.Combine(AppContext.BaseDirectory, CsvPath);
         string resolvedModelPath =
             Path.Combine(AppContext.BaseDirectory, modelPath);
@@ -65,13 +65,32 @@ class Program
         TournamentRunner runner = new(StartingCapital);
         TournamentReporter reporter = new();
 
+        //var strats = new List<IStrategy>
+        //{
+        //    new BuyAndHoldStrategy(),
+        //    new MaCrossStrategy(),
+        //    new RsiStrategy(),
+        //    new BollingerBandsStrategy(),
+        //    new MlStrategy(
+        //        resolvedModelPath,
+        //        allocationPerTrade: 2000m,
+        //        equityAllocationPct: null,
+        //        name: "ml-directional-model-baseline"),
+        //    new MlStrategy(
+        //        resolvedModelPath,
+        //        allocationPerTrade: null,
+        //        equityAllocationPct: 0.20m,
+        //        name: "ml-directional-model-equity20pct")
+        //};
         var strats = new List<IStrategy>
         {
-            new BuyAndHoldStrategy(),
-            new MaCrossStrategy(),
-            new RsiStrategy(),
-            new BollingerBandsStrategy(),
-            new MlStrategy(resolvedModelPath)
+            new MlStrategy(resolvedModelPath, allocationPerTrade: 2000m, equityAllocationPct: null, name: "ml-baseline-2000"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.05m, name: "ml-equity-5pct"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.10m, name: "ml-equity-10pct"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.15m, name: "ml-equity-15pct"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.20m, name: "ml-equity-20pct"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.25m, name: "ml-equity-25pct"),
+            new MlStrategy(resolvedModelPath, allocationPerTrade: null, equityAllocationPct: 0.30m, name: "ml-equity-30pct"),
         };
 
         var results = runner.Run(strats, historicalData);
