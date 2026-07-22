@@ -54,6 +54,13 @@ public sealed class TournamentReporter
                 buyAndHoldReturn,
                 result.FirstBarTimestamp,
                 result.LastBarTimestamp);
+
+            var drawdownAudit = DrawdownAuditReporting.Analyze(result.EquityCurve);
+            Console.WriteLine(
+                $"Drawdown Audit  : Peak {drawdownAudit.PeakValue:F2} on {drawdownAudit.PeakDate:yyyy-MM-dd} " +
+                $"→ Trough {drawdownAudit.TroughValue:F2} on {drawdownAudit.TroughDate:yyyy-MM-dd} " +
+                $"({drawdownAudit.MaxDrawdownPct:P2})");
+
         }
 
         PrintComparativeSummary(allMetrics);
