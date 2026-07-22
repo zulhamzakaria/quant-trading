@@ -2,7 +2,7 @@
 
 namespace QuantTrading.Simulation.Reporting;
 
-public static class DrawdownAuditReporting
+public static class DrawdownAuditReporter
 {
     public static DrawdownAuditResult Analyze
         (IReadOnlyList<EquityPoint> equityCurve)

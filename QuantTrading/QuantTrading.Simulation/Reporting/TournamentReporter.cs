@@ -55,7 +55,7 @@ public sealed class TournamentReporter
                 result.FirstBarTimestamp,
                 result.LastBarTimestamp);
 
-            var drawdownAudit = DrawdownAuditReporting.Analyze(result.EquityCurve);
+            var drawdownAudit = DrawdownAuditReporter.Analyze(result.EquityCurve);
             Console.WriteLine(
                 $"Drawdown Audit  : Peak {drawdownAudit.PeakValue:F2} on {drawdownAudit.PeakDate:yyyy-MM-dd} " +
                 $"→ Trough {drawdownAudit.TroughValue:F2} on {drawdownAudit.TroughDate:yyyy-MM-dd} " +
