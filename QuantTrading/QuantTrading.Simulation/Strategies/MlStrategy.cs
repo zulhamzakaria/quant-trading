@@ -185,6 +185,7 @@ public sealed class MlStrategy : IStrategy
         if (confidentUp && !hasPosition)
         {
             _buySignals++;
+
             int targetShares =
                 (int)CalculatePositionSize
                 (data.Close, accountState.Cash);

@@ -98,10 +98,6 @@ public sealed class BacktestEngine
             }
             history.Add(bar);
 
-
-            //latest price update for portfolio valuation
-            _latestPrices[bar.Symbol] = bar.Close;
-
             var features = _featureGenerator
                 .ComputeMarketFeatures(history);
 
@@ -113,6 +109,7 @@ public sealed class BacktestEngine
                 if (_pendingOrders[strategy] is { } pending)
                 {
                     ExecuteOrder(
+                        strategy,
                         pending,
                         account,
                         bar.Open,
@@ -128,17 +125,21 @@ public sealed class BacktestEngine
                 OrderRequest? request = null;
                 try
                 {
-                    request = strategy.OnData
-                        (bar, features, account);
+                    request = strategy.OnData(
+                        bar, 
+                        features, 
+                        account);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[STRATEGY CRASH] '{strategy.Name}' failed on {bar.Timestamp}: {ex.Message}");
                     continue;
                 }
-
                 _pendingOrders[strategy] = request;
             }
+
+            // ADD here — after execution, before equity-curve reporting:
+            _latestPrices[bar.Symbol] = bar.Close;
 
             for (int i = 0; i < _strategies.Count; i++)
             {
