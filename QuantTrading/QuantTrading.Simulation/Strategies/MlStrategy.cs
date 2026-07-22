@@ -11,7 +11,8 @@ public sealed class MlStrategy : IStrategy
     private readonly PredictionEngine<TrainingRow, ModelPrediction>
         _predictionEngine;
 
-    private readonly decimal _allocationPerTrade;
+    private readonly decimal? _allocationPerTrade;
+    private readonly decimal? _equityAllocationPct;
     private readonly bool _diagnosticMode;
 
     private readonly float _confidenceThreshold;
@@ -57,10 +58,11 @@ public sealed class MlStrategy : IStrategy
 
     public MlStrategy(
         string modelPath,
-        decimal allocationPerTrade = 2000m,
+        decimal? allocationPerTrade = 2000m,
         bool diagnosticMode = false,
         float confidenceThreshold = 0.5f,
-        float? exitThreshold = null)
+        float? exitThreshold = null,
+        decimal? equityAllocationPct = null)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -70,16 +72,27 @@ public sealed class MlStrategy : IStrategy
             throw new FileNotFoundException(
                 "Target ML model binary file was not found",
                 modelPath);
-        if (allocationPerTrade <= 0)
+        int sizingModesSet =
+            (allocationPerTrade is not null ? 1 : 0) +
+            (equityAllocationPct is not null ? 1 : 0);
+        if (sizingModesSet != 1)
+            throw new ArgumentException(
+                "Exactly one sizing mode must be specified: allocationPerTrade " +
+                "(fixed dollar) or equityAllocationPct (percent of equity) — not both, not neither.");
+        if (allocationPerTrade is { } dollar && dollar <= 0)
             throw new ArgumentOutOfRangeException(
                 nameof(allocationPerTrade),
                 "Allocation per trade must be greater than zero.");
+        if (equityAllocationPct is { } pct && (pct <= 0 || pct > 1))
+            throw new ArgumentOutOfRangeException(
+                nameof(equityAllocationPct),
+                "Equity allocation percent must be in the range (0, 1].");
         if (confidenceThreshold < 0.5f || confidenceThreshold >= 1f)
             throw new ArgumentOutOfRangeException(
                 nameof(confidenceThreshold),
                 "Confidence threshold must be in the range [0.5, 1.0) — " +
                 "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
-        if (exitThreshold is  not null &&
+        if (exitThreshold is not null &&
             (exitThreshold < 0.5f || exitThreshold >= 1f))
             throw new ArgumentOutOfRangeException(
                 nameof(exitThreshold),
@@ -88,8 +101,9 @@ public sealed class MlStrategy : IStrategy
                 "already coincides with PredictedLabel == false); values above 0.5 " +
                 "tighten the hold requirement (exit while confidence weakens, even if " +
                 "still nominally predicting up).");
-        
+
         _allocationPerTrade = allocationPerTrade;
+        _equityAllocationPct = equityAllocationPct;
         _diagnosticMode = diagnosticMode;
         _confidenceThreshold = confidenceThreshold;
         _exitThreshold = exitThreshold;
@@ -114,8 +128,8 @@ public sealed class MlStrategy : IStrategy
     }
 
     public OrderRequest? OnData(
-        MarketData data, 
-        MarketFeatures features, 
+        MarketData data,
+        MarketFeatures features,
         IReadonlyAccountState accountState)
     {
         if (data is null || data.Close <= 0)
@@ -129,7 +143,7 @@ public sealed class MlStrategy : IStrategy
         ModelPrediction prediction;
         try
         {
-            prediction = 
+            prediction =
                 _predictionEngine.Predict(latestFeature);
         }
         catch (Exception ex)
@@ -178,7 +192,7 @@ public sealed class MlStrategy : IStrategy
         // exitThreshold of 0.5f this condition is a no-op — Probability < 0.5
         // already coincides with PredictedLabel == false in the normal case
         // — so behavior is identical to the original label-flip-only exit.
-        bool shouldExitOnWeakConfidence = hasPosition && 
+        bool shouldExitOnWeakConfidence = hasPosition &&
             _exitThreshold is { } threshold &&
             prediction.Probability < threshold;
 
@@ -186,52 +200,71 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
 
-            int targetShares =
-                (int)CalculatePositionSize
-                (data.Close, accountState.Cash);
-
-            if (targetShares > 0)
+            if (_equityAllocationPct is { } pct)
             {
                 order = new OrderRequest(
                     data.Symbol,
                     OrderType.Market,
                     OrderAction.Buy,
-                    targetShares);
+                    new SizingInstruction.EquityFraction(pct));
 
                 _buyOrdersRequested++;
                 decision = "BUY";
 
                 if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        "Flat",
-                        accountState.Cash,
-                        decision,
-                        targetShares,
-                        reason: null);
-
+                    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
+                        accountState.Cash, decision, quantity: null,
+                        reason: $"Equity-fraction sizing ({pct:P0}); shares computed at execution");
             }
             else
             {
-                _rejectedOrders++;
-                decision = "HOLD";
-                reason = "Position size calculated to zero";
-                if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        "Flat",
-                        accountState.Cash,
-                        decision,
-                        quantity: null,
-                        reason);
+                int targetShares = (int)CalculatePositionSize(
+                    data.Close,
+                    accountState.Cash);
+
+                if (targetShares > 0)
+                {
+                    order = new OrderRequest(
+                        data.Symbol,
+                        OrderType.Market,
+                        OrderAction.Buy,
+                        new SizingInstruction.FixedQuantity(targetShares));
+
+                    _buyOrdersRequested++;
+                    decision = "BUY";
+
+                    if (_diagnosticMode)
+                        PrintBarDecision(
+                            dateStr,
+                            data.Close,
+                            prediction,
+                            "Flat",
+                            accountState.Cash,
+                            decision,
+                            targetShares,
+                            reason: null);
+
+                }
+                else
+                {
+                    _rejectedOrders++;
+                    decision = "HOLD";
+                    reason = "Position size calculated to zero";
+                    if (_diagnosticMode)
+                        PrintBarDecision(
+                            dateStr,
+                            data.Close,
+                            prediction,
+                            "Flat",
+                            accountState.Cash,
+                            decision,
+                            quantity: null,
+                            reason);
+                }
             }
         }
-        else if 
-            ((!prediction.PredictedLabel || shouldExitOnWeakConfidence) 
+        else if
+            ((!prediction.PredictedLabel || shouldExitOnWeakConfidence)
             && hasPosition)
         {
             _sellSignals++;
@@ -244,12 +277,12 @@ public sealed class MlStrategy : IStrategy
                     data.Symbol,
                     OrderType.Market,
                     OrderAction.Sell,
-                    heldQty);
+                    new SizingInstruction.FixedQuantity(heldQty));
 
                 _sellOrdersRequested++;
                 decision = "SELL";
 
-                if (shouldExitOnWeakConfidence 
+                if (shouldExitOnWeakConfidence
                     && prediction.PredictedLabel)
                 {
                     _earlyExitsOnWeakConfidence++;
@@ -322,7 +355,7 @@ public sealed class MlStrategy : IStrategy
             decision = "HOLD";
             reason = "No position to exit";
 
-            if(!confidentUp && !confidentDown)
+            if (!confidentUp && !confidentDown)
             {
                 _lowConfidenceSkips++;
                 reason = $"Prediction confidence below threshold ({prediction.Probability:F2})";
@@ -428,8 +461,8 @@ public sealed class MlStrategy : IStrategy
         int? quantity,
         string? reason)
     {
-        string predLabel = prediction.PredictedLabel 
-            ? "Buy (True)" 
+        string predLabel = prediction.PredictedLabel
+            ? "Buy (True)"
             : "Sell/Down (False)";
 
         Console.WriteLine($"Date       : {date}");
@@ -459,7 +492,9 @@ public sealed class MlStrategy : IStrategy
     {
         if (price <= 0)
             return 0;
-        decimal effectiveAllocation = Math.Min(availableCash, _allocationPerTrade);
+        decimal effectiveAllocation = Math.Min(
+            availableCash, 
+            _allocationPerTrade.Value);
         return (int)Math.Floor(effectiveAllocation / price);
     }
 }
