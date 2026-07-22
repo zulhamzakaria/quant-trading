@@ -27,57 +27,63 @@ public sealed class SimulatedBroker
 
     public ExecutionResult ProcessOrder(OrderRequest order, DateTime timestamp)
     {
-        if (!_latestPrices.TryGetValue(order.Symbol, out var currentPrice))
-        {
-            return new ExecutionResult(
-                false,
-                "Market price not available for symbol: " + order.Symbol,
-                null
-                );
-        }
 
-        decimal totalCost = currentPrice * order.Quantity;
+        throw new NotImplementedException
+            ("SimulatedBroker has not been updated for allocation-based position sizing and is currently unused.");
 
-        if (order.Action == OrderAction.Buy)
-        {
-            if (totalCost > CashBalance)
-            {
-                return new ExecutionResult(
-                    false,
-                    "Insufficient cash balance to execute buy order.",
-                    null
-                    );
-            }
-            CashBalance -= totalCost;
-            _activePositions[order.Symbol] = _activePositions.GetValueOrDefault(order.Symbol) + order.Quantity;
-        }
-        else if (order.Action == OrderAction.Sell)
-        {
-            int sharesOwned = _activePositions.GetValueOrDefault(order.Symbol);
-            if (sharesOwned < order.Quantity)
-            {
-                return new ExecutionResult(
-                    false,
-                    "Insufficient stocks to execute sell order.",
-                    null
-                    );
-            }
-            CashBalance += totalCost;
-            _activePositions[order.Symbol] = sharesOwned - order.Quantity;
-        }
 
-        var fillReceipt = new FillReceipt(
-            order.Symbol,
-            order.Action,
-            currentPrice,
-            order.Quantity,
-            timestamp);
+        //// seems like an abandoned path
+        //if (!_latestPrices.TryGetValue(order.Symbol, out var currentPrice))
+        //{
+        //    return new ExecutionResult(
+        //        false,
+        //        "Market price not available for symbol: " + order.Symbol,
+        //        null
+        //        );
+        //}
 
-        _fillHistory.Add(fillReceipt);
-        return new ExecutionResult(
-            true,
-            string.Empty,
-            fillReceipt);
+        //decimal totalCost = currentPrice * order.Quantity;
+
+        //if (order.Action == OrderAction.Buy)
+        //{
+        //    if (totalCost > CashBalance)
+        //    {
+        //        return new ExecutionResult(
+        //            false,
+        //            "Insufficient cash balance to execute buy order.",
+        //            null
+        //            );
+        //    }
+        //    CashBalance -= totalCost;
+        //    _activePositions[order.Symbol] = _activePositions.GetValueOrDefault(order.Symbol) + order.Quantity;
+        //}
+        //else if (order.Action == OrderAction.Sell)
+        //{
+        //    int sharesOwned = _activePositions.GetValueOrDefault(order.Symbol);
+        //    if (sharesOwned < order.Quantity)
+        //    {
+        //        return new ExecutionResult(
+        //            false,
+        //            "Insufficient stocks to execute sell order.",
+        //            null
+        //            );
+        //    }
+        //    CashBalance += totalCost;
+        //    _activePositions[order.Symbol] = sharesOwned - order.Quantity;
+        //}
+
+        //var fillReceipt = new FillReceipt(
+        //    order.Symbol,
+        //    order.Action,
+        //    currentPrice,
+        //    order.Quantity,
+        //    timestamp);
+
+        //_fillHistory.Add(fillReceipt);
+        //return new ExecutionResult(
+        //    true,
+        //    string.Empty,
+        //    fillReceipt);
     }
 
     public decimal CalculateTotalPortfolioValue()

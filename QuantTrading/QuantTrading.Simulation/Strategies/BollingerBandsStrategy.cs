@@ -35,7 +35,7 @@ public sealed class BollingerBandsStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Buy,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
 
         if(data.Close > upperBand && hasPosition)
@@ -49,7 +49,7 @@ public sealed class BollingerBandsStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Sell,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
 
         return null;

@@ -18,7 +18,7 @@ public sealed class DummyBuyAndHoldStrategy : IStrategy
                  data.Symbol,
                  OrderType.Market,
                  OrderAction.Buy,
-                 10);
+                 new SizingInstruction.FixedQuantity(10));
         }
         return null;
     }

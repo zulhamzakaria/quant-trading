@@ -31,7 +31,7 @@ public sealed class RsiStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Buy,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
 
         if (features.Rsi14 > OverboughtThreshold && hasPosition)
@@ -45,7 +45,7 @@ public sealed class RsiStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Sell,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
         return null;
     }

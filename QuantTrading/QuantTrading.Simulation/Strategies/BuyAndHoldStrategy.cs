@@ -22,6 +22,6 @@ public sealed class BuyAndHoldStrategy : IStrategy
             data.Symbol,
             OrderType.Market,
             OrderAction.Buy,
-            quantity);
+            new SizingInstruction.FixedQuantity(quantity));
     }
 }

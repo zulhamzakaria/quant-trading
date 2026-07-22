@@ -28,7 +28,7 @@ public sealed class MaCrossStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Buy,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
 
         if (!isBullish && hasPosition)
@@ -42,7 +42,7 @@ public sealed class MaCrossStrategy : IStrategy
                 data.Symbol,
                 OrderType.Market,
                 OrderAction.Sell,
-                quantity);
+                new SizingInstruction.FixedQuantity(quantity));
         }
         return null;
     }
