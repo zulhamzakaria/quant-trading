@@ -164,6 +164,7 @@ public sealed class BacktestEngine
     }
 
     private void ExecuteOrder(
+        IStrategy strategy,
         OrderRequest request,
         StrategyAccountState account,
         decimal executionPrice,
@@ -171,10 +172,21 @@ public sealed class BacktestEngine
         List<CompletedTrade> completedTrades,
         Dictionary<string, (decimal price, DateTime timestamp)> entryPrices)
     {
-        if (request.Quantity <= 0 || executionPrice <= 0)
+        if (executionPrice <= 0)
             return;
 
-        decimal totalValue = request.Quantity * executionPrice;
+        int quantity = request.Sizing switch
+        {
+            SizingInstruction.FixedQuantity fq => fq.Shares,
+            SizingInstruction.EquityFraction ef =>
+            (int)Math.Floor(CalculateCurrentPortfolioValue(strategy) * ef.Fraction / executionPrice),
+            _ => throw new InvalidOperationException($"Unhandled sizing instruction type: {request.Sizing.GetType().Name}")
+        };
+
+        if (quantity <= 0)
+            return;
+
+        decimal totalValue = quantity * executionPrice;
 
         if (request.Action == OrderAction.Buy)
         {
@@ -183,7 +195,7 @@ public sealed class BacktestEngine
                 account.DebitCash(totalValue);
                 account.UpdatePosition(
                     request.Symbol,
-                    request.Quantity,
+                    quantity,
                     isExit: false);
 
                 entryPrices[request.Symbol] =
@@ -196,12 +208,12 @@ public sealed class BacktestEngine
             {
                 int heldShares =
                     account.GetPositionSize(request.Symbol);
-                if (heldShares >= request.Quantity)
+                if (heldShares >= quantity)
                 {
                     account.CreditCash(totalValue);
                     account.UpdatePosition(
                         request.Symbol,
-                        request.Quantity,
+                        quantity,
                         isExit: true);
 
                     if (entryPrices.TryGetValue
@@ -211,13 +223,11 @@ public sealed class BacktestEngine
                             Symbol: request.Symbol,
                             EntryPrice: entry.price,
                             ExitPrice: executionPrice,
-                            Quantity: request.Quantity,
+                            Quantity: quantity,
                             EntryTimestamp: entry.timestamp,
                             ExitTimestamp: executionTimestamp));
-
                         entryPrices.Remove(request.Symbol);
                     }
-
                 }
             }
         }

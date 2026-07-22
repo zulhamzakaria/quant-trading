@@ -4,5 +4,5 @@ public sealed record OrderRequest(
     string Symbol,
     OrderType Type,
     OrderAction Action,
-    int Quantity,
+    SizingInstruction Sizing,
     decimal? LimitPrice = null);
