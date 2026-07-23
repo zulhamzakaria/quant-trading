@@ -8,6 +8,9 @@ public sealed class FeatureGenerator
     private const int MinBarRequired = 22;
     private const int AdxPeriod = 14;
 
+    private const int AtrPeriod = 14;   // new
+    private const int RsiPeriod = 14;   // new
+
     // shared among some of the indicators
     private const int StandardWindow = 20;
 
@@ -116,72 +119,9 @@ public sealed class FeatureGenerator
         decimal volumeRatio =
             avgVol5 != 0 ? current.Volume / avgVol5 : 1.0m;
 
-        decimal avgGain = 0m;
-        decimal avgLoss = 0m;
+        decimal rsi14 = ComputeRSI14(bars, index);
 
-        int startRsiIndex = index - 14;
-        if (startRsiIndex < 1)
-            startRsiIndex = 1;
-
-        for (int k = startRsiIndex;
-            k < startRsiIndex + 14 && k <= index;
-            k++)
-        {
-            decimal change = bars[k].Close - bars[k - 1].Close;
-            if (change > 0)
-                avgGain += change;
-            else
-                avgLoss += Math.Abs(change);
-        }
-
-        avgGain /= 14m;
-        avgLoss /= 14m;
-
-        for (int m = startRsiIndex + 14; m <= index; m++)
-        {
-            decimal change =
-                bars[m].Close - bars[m - 1].Close;
-            decimal gain =
-                change > 0 ? change : 0m;
-            decimal loss =
-                change < 0 ? Math.Abs(change) : 0m;
-
-            avgGain = ((avgGain * 13m) + gain) / 14m;
-            avgLoss = ((avgLoss * 13m) + loss) / 14m;
-        }
-
-        decimal rsi14 = 50m;
-        if (avgLoss > 0)
-        {
-            decimal rs = avgGain / avgLoss;
-            rsi14 = 100m - (100m / (1m + rs));
-        }
-        else if (avgGain > 0)
-        {
-            rsi14 = 100m;
-        }
-
-        decimal avgAtr = 0m;
-        int startAtrIndex = index - 14;
-        if (startAtrIndex < 1)
-            startAtrIndex = 1;
-
-        for (int k = startAtrIndex;
-            k < startAtrIndex + 14 && k <= index;
-            k++)
-        {
-            avgAtr +=
-                CalculateTrueRange(bars[k], bars[k - 1]);
-        }
-        avgAtr /= 14m;
-
-        for (int m = startAtrIndex + 14; m <= index; m++)
-        {
-            decimal tr =
-                CalculateTrueRange(bars[m], bars[m - 1]);
-            avgAtr = ((avgAtr * 13m) + tr) / 14m;
-        }
-
+        decimal avgAtr = ComputeAtr14(bars, index);
         decimal atrRatio14 =
             current.Close != 0
             ? avgAtr / current.Close
@@ -387,4 +327,78 @@ public sealed class FeatureGenerator
         return Math.Max(hL, Math.Max(hC, lC));
     }
 
+
+    private static decimal ComputeAtr14
+        (IReadOnlyList<MarketData> bars, int index)
+    {
+        // True single-seed Wilder recursion, carried from the first available
+        // bar through to `index` — no window truncation, no per-call reset.
+        // Validated against TA-Lib via AtrValidation.cs (see Position Sizing
+        // Checkpoint 3); prior 14-bar-seed-plus-one-step approximation
+        // diverged materially, especially around high-volatility periods.
+        //
+        // TODO: recomputes the full recursion on every call (O(n) per bar,
+        // O(n²) across a full backtest). Intentional — favors correctness and
+        // simplicity over an incremental/stateful update. Fine at current
+        // dataset scale (~2,500 bars); revisit with a persistent running-state
+        // approach if a much larger or higher-frequency dataset makes this
+        // measurably slow.
+        decimal seedSum = 0m;
+        for (int i = 1; i <= AtrPeriod; i++)
+            seedSum += CalculateTrueRange(bars[i], bars[i - 1]);
+        decimal avgAtr = seedSum / AtrPeriod;
+
+        for (int i = AtrPeriod + 1; i <= index; i++)
+        {
+            decimal tr = CalculateTrueRange(bars[i], bars[i - 1]);
+            avgAtr = ((avgAtr * (AtrPeriod - 1)) + tr) / AtrPeriod;
+        }
+        return avgAtr;
+    }
+
+    private static decimal ComputeRSI14
+        (IReadOnlyList<MarketData> bars, int index)
+    {
+        // Same fix and same tradeoff as ComputeAtr14 — see that method's
+        // comment. Validated against TA-Lib; prior implementation diverged
+        // more severely than ATR's (correlation 0.90 vs. 0.97), with errors
+        // spread across the full history rather than concentrated in specific
+        // events.
+        decimal seedGain = 0m, seedLoss = 0m;
+        for (int i = 1; i <= RsiPeriod; i++)
+        {
+            decimal change = bars[i].Close - bars[i - 1].Close;
+            if (change > 0)
+                seedGain += change;
+            else
+                seedLoss += Math.Abs(change);
+        }
+        decimal avgGain = seedGain / RsiPeriod;
+        decimal avgLoss = seedLoss / RsiPeriod;
+
+        for (int i = RsiPeriod + 1; i <= index; i++)
+        {
+            decimal change =
+                bars[i].Close - bars[i - 1].Close;
+            decimal gain =
+                change > 0 ? change : 0m;
+            decimal loss =
+                change < 0 ? Math.Abs(change) : 0m;
+            avgGain = ((avgGain * (RsiPeriod - 1)) + gain) / RsiPeriod;
+            avgLoss = ((avgLoss * (RsiPeriod - 1)) + loss) / RsiPeriod;
+        }
+
+        decimal rsi = 50m;
+        if (avgLoss > 0)
+        {
+            decimal rs = avgGain / avgLoss;
+            rsi = 100m - (100m / (1m + rs));
+        }
+        else if (avgGain > 0)
+        {
+            rsi = 100m;
+        }
+
+        return rsi;
+    }
 }
