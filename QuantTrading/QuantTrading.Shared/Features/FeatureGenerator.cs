@@ -62,6 +62,28 @@ public sealed class FeatureGenerator
         return ComputeMarketFeaturesAt(bars, bars.Count - 1);
     }
 
+    // Computes MarketFeatures for every valid bar index across the full
+    // series, in order. Used by diagnostics/validation scripts (e.g.
+    // AtrValidation) that need the real, production computation over full
+    // history — avoids maintaining a manually-synced copy of
+    // ComputeMarketFeaturesAt's logic that can silently drift out of sync
+    // if this file changes.
+    public IReadOnlyList<MarketFeatures> ComputeMarketFeaturesSeries
+        (IReadOnlyList<MarketData> bars)
+    {
+        var results = new List<MarketFeatures>();
+        if (bars is null || bars.Count < MinBarRequired)
+            return results;
+
+        for (int i = StandardWindow; i < bars.Count; i++)
+        {
+            var features = ComputeMarketFeaturesAt(bars, i);
+            if (features is not null)
+                results.Add(features);
+        }
+        return results;
+    }
+
     private MarketFeatures? ComputeMarketFeaturesAt
         (IReadOnlyList<MarketData> bars, int index)
     {
