@@ -116,7 +116,7 @@ public sealed class TournamentReporter
                     $"{result.StrategyName,-22} " +
                     $"{zeroTradeReturnCol,-14} " +
                     $"{cagrCol,-10} {tradeCountCol,-8} " +
-                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {zeroTradeDrawdownCol}" +
+                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {zeroTradeDrawdownCol, -14}" +
                     $"{zeroTradeExposureCol}");
                 continue;
             }
@@ -139,7 +139,7 @@ public sealed class TournamentReporter
                 $"{result.StrategyName,-22} " +
                 $"{totalReturnCol,-14} " +
                 $"{cagrCol,-10} {tradeCountCol,-8} " +
-                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} {drawdownCol}" +
+                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} {drawdownCol, -14}" +
                 $"{exposureCol}");
         }
 
