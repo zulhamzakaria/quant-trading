@@ -2,6 +2,7 @@
 using QuantTrading.ML.Engine;
 using QuantTrading.ML.Engine.Experiments;
 using QuantTrading.Shared.Contracts;
+using QuantTrading.Shared.Diagnostics;
 using QuantTrading.Simulation.Reporting;
 using QuantTrading.Simulation.Strategies;
 using QuantTrading.Simulation.Tournament;
@@ -41,6 +42,11 @@ class Program
                 break;
             case "train-pricezscore-aapl":
                 new PriceZScoreAaplExperiment().Run();
+                break;
+            case "validate-atr":
+                string csvPath = Path.Combine(AppContext.BaseDirectory, CsvPath);
+                var bars = new LocalCsvParser().ParseFile(csvPath);
+                AtrValidation.RunComparison(bars);
                 break;
             default:
                 PrintUsage();

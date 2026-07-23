@@ -70,7 +70,8 @@ public static class AtrValidation
         Console.WriteLine("--- Top 10 Largest Discrepancies ---");
         Console.WriteLine($"{"Date",-12} {"Reference",-12} {"Current",-12} {"AbsError"}");
         foreach (var row in rows.OrderByDescending(r => r.AbsError).Take(10))
-            Console.WriteLine($"{row.Date:yyyy-MM-dd,-12} {row.Ref,-12:F6} {row.Current,-12:F6} {row.AbsError:F6}");
+            Console.WriteLine($"{row.Date,-12:yyyy-MM-dd} {row.Ref,-12:F6} {row.Current,-12:F6} {row.AbsError:F6}");
+
         Console.WriteLine();
 
         bool pass = correlation >= MinAcceptableCorrelation
@@ -115,7 +116,7 @@ public static class AtrValidation
                 ((smoothed * (AtrPeriod - 1)) + tr) / AtrPeriod;
             result[i] = SafeClose(bars[i], out decimal close)
                 ? smoothed / close
-                :null;
+                : null;
         }
 
         return result;
@@ -172,6 +173,13 @@ public static class AtrValidation
     private static decimal TrueRange
         (MarketData current, MarketData prev)
     {
+        if (!SafeClose(prev, out decimal prevClose))
+            throw new InvalidOperationException(
+                $"Invalid (non-positive) Close on prior bar at {prev.Timestamp:yyyy-MM-dd} — " +
+                "cannot compute True Range. This diagnostic assumes clean input data; " +
+                "if this fires, inspect the source CSV around this date before trusting " +
+                "any part of the ATR comparison.");
+
         decimal hL = current.High - current.Low;
         decimal hC = Math.Abs(current.High - prev.Close);
         decimal lC = Math.Abs(current.Low - prev.Close);
