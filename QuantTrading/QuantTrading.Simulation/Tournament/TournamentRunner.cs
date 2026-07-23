@@ -2,6 +2,7 @@
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Models;
+using QuantTrading.Simulation.Reporting;
 
 namespace QuantTrading.Simulation.Tournament;
 
@@ -69,6 +70,17 @@ public sealed class TournamentRunner
             var equityCurve = engine.GetEquityCurve(strategy);
             decimal endingValue = equityCurve[^1].Equity;
 
+            var trades = engine.GetCompletedTrades(strategy);
+            string symbol = historicalData[0].Symbol;
+            var openEntry = engine.GetOpenPositionEntryTimestamp
+                (strategy, symbol);
+            decimal exposureRatio = ExposureReporter.CalculateExposureRatio(
+                trades,
+                firstBar,
+                lastBar,
+                openEntry);
+
+
             results.Add(new StrategyResult
                 (StrategyName: strategy.Name,
                 Trades: engine.GetCompletedTrades(strategy),
@@ -76,7 +88,8 @@ public sealed class TournamentRunner
                 EndingPortfolioValue: endingValue,
                 FirstBarTimestamp: firstBar,
                 LastBarTimestamp: lastBar,
-                EquityCurve:equityCurve));
+                EquityCurve: equityCurve,
+                ExposureRatio: exposureRatio));
         }
 
         return results;

@@ -299,4 +299,21 @@ public sealed class BacktestEngine
         return state;
     }
 
+    // Returns the entry timestamp for a strategy's currently open position in
+    // a symbol, or null if no position is open. Same reporting-accessor
+    // pattern as GetEquityCurve/GetCompletedTrades/GetAccountState — read-only
+    // simulation state exposed for post-run analysis, not used by simulation
+    // logic itself.
+    public DateTime? GetOpenPositionEntryTimestamp(IStrategy strategy, string symbol)
+    {
+        if (strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+        if (!_entryPrices.TryGetValue(strategy, out var symbolEntries))
+            throw new KeyNotFoundException(
+                "No active account state registry found for the provided strategy instance.");
+
+        return symbolEntries.TryGetValue(symbol, out var entry)
+            ? entry.timeStamp
+            : null;
+    }
 }

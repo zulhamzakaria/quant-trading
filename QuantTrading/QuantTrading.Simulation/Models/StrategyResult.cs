@@ -7,7 +7,8 @@ public sealed record StrategyResult(
     decimal EndingPortfolioValue,
     DateTime FirstBarTimestamp,
     DateTime LastBarTimestamp,
-    IReadOnlyList<EquityPoint> EquityCurve)
+    IReadOnlyList<EquityPoint> EquityCurve,
+    decimal ExposureRatio)
 {
     public decimal TotalReturn =>
         (EndingPortfolioValue - StartingCapital) / StartingCapital * 100m;

@@ -1,4 +1,6 @@
-﻿using QuantTrading.Simulation.Analytics;
+﻿using QuantTrading.Domain.Models;
+using QuantTrading.Simulation.Analytics;
+using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Models;
 
 namespace QuantTrading.Simulation.Reporting;
@@ -64,6 +66,8 @@ public sealed class TournamentReporter
             var exposure = ExposureReporter.CalculateExposureRatio(
                 result.Trades, result.FirstBarTimestamp, result.LastBarTimestamp);
             Console.WriteLine($"Exposure Ratio : {exposure:P1} of period in market");
+
+            Console.WriteLine($"Exposure Ratio : {result.ExposureRatio:P1} of period in market");
 
         }
 

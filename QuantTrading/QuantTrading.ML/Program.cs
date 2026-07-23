@@ -79,19 +79,19 @@ class Program
         var strats = new List<IStrategy>
         {
             new BuyAndHoldStrategy(),
-            new MaCrossStrategy(),
-            new RsiStrategy(),
-            new BollingerBandsStrategy(),
-            new MlStrategy(
-                resolvedModelPath,
-                allocationPerTrade: 2000m,
-                equityAllocationPct: null,
-                name: "ml-directional-model-baseline"),
+            //new MaCrossStrategy(),
+            //new RsiStrategy(),
+            //new BollingerBandsStrategy(),
             //new MlStrategy(
             //    resolvedModelPath,
-            //    allocationPerTrade: null,
-            //    equityAllocationPct: 0.20m,
-            //    name: "ml-directional-model-equity20pct")
+            //    allocationPerTrade: 2000m,
+            //    equityAllocationPct: null,
+            //    name: "ml-directional-model-baseline"),
+            ////new MlStrategy(
+            ////    resolvedModelPath,
+            ////    allocationPerTrade: null,
+            ////    equityAllocationPct: 0.20m,
+            ////    name: "ml-directional-model-equity20pct")
         };
 
         var results = runner.Run(strats, historicalData);
