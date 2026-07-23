@@ -63,10 +63,6 @@ public sealed class TournamentReporter
                 $"→ Trough {drawdownAudit.TroughValue:F2} on {drawdownAudit.TroughDate:yyyy-MM-dd} " +
                 $"({drawdownAudit.MaxDrawdownPct:P2})");
 
-            var exposure = ExposureReporter.CalculateExposureRatio(
-                result.Trades, result.FirstBarTimestamp, result.LastBarTimestamp);
-            Console.WriteLine($"Exposure Ratio : {exposure:P1} of period in market");
-
             Console.WriteLine($"Exposure Ratio : {result.ExposureRatio:P1} of period in market");
 
         }
@@ -88,8 +84,9 @@ public sealed class TournamentReporter
             $"{"Win Rate",-12} " +
             $"{"Profit Factor",-16} " +
             $"{"Expectancy",-12} " +
-            $"{"Max Drawdown"}");
-        Console.WriteLine(new string('-', 100));
+            $"{"Max Drawdown", -14}" +
+            $"{"Exposure"}");
+        Console.WriteLine(new string('-', 114));
 
         //rank is based on CAGR
         var ranked = allMetrics
@@ -114,11 +111,13 @@ public sealed class TournamentReporter
                     metrics.MaxDrawdownPercent.HasValue
                     ? $"{metrics.MaxDrawdownPercent:F2}%"
                     : "N/A";
+                string zeroTradeExposureCol = $"{result.ExposureRatio:P1}";
                 Console.WriteLine(
                     $"{result.StrategyName,-22} " +
                     $"{zeroTradeReturnCol,-14} " +
                     $"{cagrCol,-10} {tradeCountCol,-8} " +
-                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {zeroTradeDrawdownCol}");
+                    $"{"N/A",-10} {"N/A",-14} {"N/A",-12} {zeroTradeDrawdownCol}" +
+                    $"{zeroTradeExposureCol}");
                 continue;
             }
 
@@ -134,12 +133,14 @@ public sealed class TournamentReporter
                 metrics.MaxDrawdownPercent.HasValue
                 ? $"{metrics.MaxDrawdownPercent:F2}%"
                 : "N/A";
+            string exposureCol = $"{result.ExposureRatio:P1}";
 
             Console.WriteLine(
                 $"{result.StrategyName,-22} " +
                 $"{totalReturnCol,-14} " +
                 $"{cagrCol,-10} {tradeCountCol,-8} " +
-                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} {drawdownCol}");
+                $"{winRateCol,-10} {profitFactorCol,-14} {expectancyCol,-12} {drawdownCol}" +
+                $"{exposureCol}");
         }
 
         Console.WriteLine();
