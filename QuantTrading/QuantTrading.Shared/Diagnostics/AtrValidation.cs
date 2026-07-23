@@ -1,4 +1,5 @@
-﻿using QuantTrading.Shared.Models;
+﻿using QuantTrading.Shared.Features;
+using QuantTrading.Shared.Models;
 
 namespace QuantTrading.Shared.Diagnostics;
 
@@ -21,7 +22,11 @@ public static class AtrValidation
         }
 
         var refAtr = ComputeReferenceWilderAtr(bars);
-        var currentAtr = ComputeCurrentImplementationAtr(bars);
+
+        var featureSeries = new FeatureGenerator()
+            .ComputeMarketFeaturesSeries(bars);
+        var currentAtrByTimestamp = featureSeries
+            .ToDictionary(f => f.Timestamp, f => f.AtrRatio14);
 
         var rows = new List<(
             DateTime Date,
@@ -31,11 +36,12 @@ public static class AtrValidation
 
         for (int i = AtrPeriod; i < bars.Count; i++)
         {
-            if (refAtr[i] is null || currentAtr[i] is null)
+            if (refAtr[i] is null)
+                continue;
+            if (!currentAtrByTimestamp.TryGetValue(bars[i].Timestamp, out decimal c))
                 continue;
 
             decimal r = refAtr[i]!.Value;
-            decimal c = currentAtr[i]!.Value;
             rows.Add((bars[i].Timestamp, r, c, Math.Abs(r - c)));
         }
 
