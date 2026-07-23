@@ -1,5 +1,4 @@
-﻿using QuantTrading.Domain.Models;
-using QuantTrading.Shared.Contracts;
+﻿using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
