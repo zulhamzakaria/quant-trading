@@ -61,6 +61,10 @@ public sealed class TournamentReporter
                 $"→ Trough {drawdownAudit.TroughValue:F2} on {drawdownAudit.TroughDate:yyyy-MM-dd} " +
                 $"({drawdownAudit.MaxDrawdownPct:P2})");
 
+            var exposure = ExposureReporter.CalculateExposureRatio(
+                result.Trades, result.FirstBarTimestamp, result.LastBarTimestamp);
+            Console.WriteLine($"Exposure Ratio : {exposure:P1} of period in market");
+
         }
 
         PrintComparativeSummary(allMetrics);
@@ -102,7 +106,7 @@ public sealed class TournamentReporter
             if (metrics.TradeCount == 0)
             {
                 string zeroTradeReturnCol = $"{metrics.TotalReturn:F2}%";
-                string zeroTradeDrawdownCol = 
+                string zeroTradeDrawdownCol =
                     metrics.MaxDrawdownPercent.HasValue
                     ? $"{metrics.MaxDrawdownPercent:F2}%"
                     : "N/A";
@@ -122,7 +126,7 @@ public sealed class TournamentReporter
                 ? $"{metrics.Expectancy.Value:F2}"
                 : "N/A";
             string totalReturnCol = $"{metrics.TotalReturn:F2}%";
-            string drawdownCol = 
+            string drawdownCol =
                 metrics.MaxDrawdownPercent.HasValue
                 ? $"{metrics.MaxDrawdownPercent:F2}%"
                 : "N/A";
