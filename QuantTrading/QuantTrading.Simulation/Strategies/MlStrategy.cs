@@ -57,7 +57,7 @@ public sealed class MlStrategy : IStrategy
         string action)> _predictionTable = new();
     private const int PredictionTableLimit = 20;
 
-    private readonly string _name; 
+    private readonly string _name;
     public string Name => _name;
 
     public MlStrategy(
@@ -80,14 +80,25 @@ public sealed class MlStrategy : IStrategy
                 "Target ML model binary file was not found",
                 modelPath);
 
+        // Exactly one sizing mode must be active. ATR mode requires both
+        // atrBaseFraction and atrK to be set together (a lone value would be
+        // meaningless — the formula needs both), so it's validated as a pair,
+        // not counted twice.
+        bool atrModeSet = atrBaseFraction is not null || atrK is not null;
+        if (atrModeSet && (atrBaseFraction is null || atrK is null))
+            throw new ArgumentException(
+                "atrBaseFraction and atrK must both be specified together, or both left null.");
+
         int sizingModesSet =
             (allocationPerTrade is not null ? 1 : 0) +
-            (equityAllocationPct is not null ? 1 : 0);
+            (equityAllocationPct is not null ? 1 : 0) +
+            (atrModeSet ? 1 : 0);
         if (sizingModesSet != 1)
             throw new ArgumentException(
                 "Exactly one sizing mode must be specified: allocationPerTrade " +
-                "(fixed dollar) or equityAllocationPct (percent of equity) — not both, not neither.");
-       
+                "(fixed dollar), equityAllocationPct (percent of equity), or " +
+                "atrBaseFraction+atrK (ATR-scaled equity fraction) — not multiple, not none.");
+
         if (allocationPerTrade is { } dollar && dollar <= 0)
             throw new ArgumentOutOfRangeException(
                 nameof(allocationPerTrade),
@@ -96,6 +107,7 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentOutOfRangeException(
                 nameof(equityAllocationPct),
                 "Equity allocation percent must be in the range (0, 1].");
+
         if (atrBaseFraction is { } abf && (abf <= 0 || abf > 1))
             throw new ArgumentOutOfRangeException(nameof(atrBaseFraction),
                 "ATR base fraction must be in the range (0, 1].");
@@ -220,14 +232,15 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
 
-            if (_atrBaseFraction is { } baseFrac && _atrK is { } k)
+            if (_atrBaseFraction is not null && _atrK is not null)
             {
                 // equityFraction = baseFraction / (1 + k * AtrRatio14) — see
                 // handoff doc Position Sizing Checkpoint 3 for derivation.
                 // baseFrac/k are policy + algebraically-derived calibration
                 // constants respectively, frozen for this run per the project's
                 // "no retuning after seeing results" discipline.
-                decimal resolvedFraction = baseFrac / (1m + k * features.AtrRatio14);
+                decimal resolvedFraction = ResolveAtrScaledFraction
+                    (features.AtrRatio14);
 
                 order = new OrderRequest(
                     data.Symbol,
@@ -537,8 +550,27 @@ public sealed class MlStrategy : IStrategy
         if (price <= 0)
             return 0;
         decimal effectiveAllocation = Math.Min(
-            availableCash, 
+            availableCash,
             _allocationPerTrade.Value);
         return (int)Math.Floor(effectiveAllocation / price);
+    }
+
+    private decimal ResolveAtrScaledFraction(decimal atrRatio14)
+    {
+        decimal fraction =
+            _atrBaseFraction!.Value / (1m + _atrK!.Value * atrRatio14);
+
+        // Invariant, not a clamp: baseFraction ∈ (0,1] and k > 0 (both enforced
+        // in the constructor) mathematically guarantee fraction <= baseFraction
+        // <= 1, since the denominator is always >= 1. This assertion exists to
+        // fail loudly if that guarantee is ever broken by a future change to
+        // the constructor's validation — not to correct a value that's
+        // expected to occur in normal operation.
+        System.Diagnostics.Debug.Assert(
+            fraction > 0m && fraction <= _atrBaseFraction!.Value,
+            $"ATR-scaled fraction {fraction} violated its mathematical invariant " +
+            $"(should be in (0, {_atrBaseFraction!.Value}]) — check constructor validation.");
+
+        return fraction;
     }
 }

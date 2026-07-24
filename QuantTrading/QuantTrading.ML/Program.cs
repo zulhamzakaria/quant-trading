@@ -14,6 +14,9 @@ class Program
     private const string DefaultModelPath = "AAPL_Base_best_model.zip";
     private const decimal StartingCapital = 10_000m;
 
+    private const decimal AtrExperimentBaseFraction = 0.20m;
+    private const decimal AtrExperimentK = 29.9043m;   // derived: halves at AAPL's 90th-percentile ATR14
+
     static void Main(string[] args)
     {
         string mode = args.Length > 0
@@ -90,8 +93,8 @@ class Program
             new MlStrategy(
                 resolvedModelPath,
                 allocationPerTrade: null,
-                atrBaseFraction: 0.20m,
-                atrK: 29.9043m,
+                atrBaseFraction: AtrExperimentBaseFraction,
+                atrK: AtrExperimentK,
                 name: "ml-atr-scaled-base20-k29_9")
         };
 
