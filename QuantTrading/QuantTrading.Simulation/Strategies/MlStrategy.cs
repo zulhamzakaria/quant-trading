@@ -13,6 +13,9 @@ public sealed class MlStrategy : IStrategy
 
     private readonly decimal? _allocationPerTrade;
     private readonly decimal? _equityAllocationPct;
+    private readonly decimal? _atrBaseFraction;
+    private readonly decimal? _atrK;
+
     private readonly bool _diagnosticMode;
 
     private readonly float _confidenceThreshold;
@@ -64,7 +67,9 @@ public sealed class MlStrategy : IStrategy
         float confidenceThreshold = 0.5f,
         float? exitThreshold = null,
         decimal? equityAllocationPct = null,
-        string name = "ml-directional-model")
+        string name = "ml-directional-model",
+        decimal? atrBaseFraction = null,
+        decimal? atrK = null)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -74,6 +79,7 @@ public sealed class MlStrategy : IStrategy
             throw new FileNotFoundException(
                 "Target ML model binary file was not found",
                 modelPath);
+
         int sizingModesSet =
             (allocationPerTrade is not null ? 1 : 0) +
             (equityAllocationPct is not null ? 1 : 0);
@@ -81,6 +87,7 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentException(
                 "Exactly one sizing mode must be specified: allocationPerTrade " +
                 "(fixed dollar) or equityAllocationPct (percent of equity) — not both, not neither.");
+       
         if (allocationPerTrade is { } dollar && dollar <= 0)
             throw new ArgumentOutOfRangeException(
                 nameof(allocationPerTrade),
@@ -89,6 +96,14 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentOutOfRangeException(
                 nameof(equityAllocationPct),
                 "Equity allocation percent must be in the range (0, 1].");
+        if (atrBaseFraction is { } abf && (abf <= 0 || abf > 1))
+            throw new ArgumentOutOfRangeException(nameof(atrBaseFraction),
+                "ATR base fraction must be in the range (0, 1].");
+        if (atrK is { } k && k <= 0)
+            throw new ArgumentOutOfRangeException(nameof(atrK),
+                "ATR k must be greater than zero — a non-positive k would invert " +
+                "or disable the volatility-shrinkage relationship the formula depends on.");
+
         if (confidenceThreshold < 0.5f || confidenceThreshold >= 1f)
             throw new ArgumentOutOfRangeException(
                 nameof(confidenceThreshold),
@@ -106,6 +121,8 @@ public sealed class MlStrategy : IStrategy
 
         _allocationPerTrade = allocationPerTrade;
         _equityAllocationPct = equityAllocationPct;
+        _atrBaseFraction = atrBaseFraction;
+        _atrK = atrK;
         _diagnosticMode = diagnosticMode;
         _confidenceThreshold = confidenceThreshold;
         _exitThreshold = exitThreshold;
@@ -203,7 +220,31 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
 
-            if (_equityAllocationPct is { } pct)
+            if (_atrBaseFraction is { } baseFrac && _atrK is { } k)
+            {
+                // equityFraction = baseFraction / (1 + k * AtrRatio14) — see
+                // handoff doc Position Sizing Checkpoint 3 for derivation.
+                // baseFrac/k are policy + algebraically-derived calibration
+                // constants respectively, frozen for this run per the project's
+                // "no retuning after seeing results" discipline.
+                decimal resolvedFraction = baseFrac / (1m + k * features.AtrRatio14);
+
+                order = new OrderRequest(
+                    data.Symbol,
+                    OrderType.Market,
+                    OrderAction.Buy,
+                    new SizingInstruction.EquityFraction(resolvedFraction));
+
+                _buyOrdersRequested++;
+                decision = "BUY";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
+                        accountState.Cash, decision, quantity: null,
+                        reason: $"ATR-scaled sizing: AtrRatio14={features.AtrRatio14:F6} " +
+                                $"-> fraction={resolvedFraction:P2}; shares computed at execution");
+            }
+            else if (_equityAllocationPct is { } pct)
             {
                 order = new OrderRequest(
                     data.Symbol,
