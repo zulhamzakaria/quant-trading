@@ -3,6 +3,7 @@ using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
+using System.Diagnostics;
 
 namespace QuantTrading.Simulation.Strategies;
 
@@ -15,6 +16,9 @@ public sealed class MlStrategy : IStrategy
     private readonly decimal? _equityAllocationPct;
     private readonly decimal? _atrBaseFraction;
     private readonly decimal? _atrK;
+
+    private readonly decimal? _confidenceMinPct;
+    private readonly decimal? _confidenceMaxPct;
 
     private readonly bool _diagnosticMode;
 
@@ -41,6 +45,8 @@ public sealed class MlStrategy : IStrategy
     private int _barsProcessed;
     private int _predictionsGenerated, _truePredictions,
     _falsePredictions;
+
+    private readonly List<decimal> _resolvedFractions = new();
 
     private int _buySignals;
     private int _buyOrdersRequested;
@@ -69,7 +75,9 @@ public sealed class MlStrategy : IStrategy
         decimal? equityAllocationPct = null,
         string name = "ml-directional-model",
         decimal? atrBaseFraction = null,
-        decimal? atrK = null)
+        decimal? atrK = null,
+        decimal? confidenceMinPct = null,
+        decimal? confidenceMaxPct = null)
     {
         if (string.IsNullOrWhiteSpace(modelPath))
             throw new ArgumentException(
@@ -89,15 +97,22 @@ public sealed class MlStrategy : IStrategy
             throw new ArgumentException(
                 "atrBaseFraction and atrK must both be specified together, or both left null.");
 
+        bool confidenceModeSet = confidenceMinPct is not null || confidenceMaxPct is not null;
+        if (confidenceModeSet && (confidenceMinPct is null || confidenceMaxPct is null))
+            throw new ArgumentException(
+                "confidenceMinPct and confidenceMaxPct must both be specified together, or both left null.");
+
         int sizingModesSet =
             (allocationPerTrade is not null ? 1 : 0) +
             (equityAllocationPct is not null ? 1 : 0) +
-            (atrModeSet ? 1 : 0);
+            (atrModeSet ? 1 : 0) +
+            (confidenceModeSet ? 1 : 0);
         if (sizingModesSet != 1)
             throw new ArgumentException(
                 "Exactly one sizing mode must be specified: allocationPerTrade " +
-                "(fixed dollar), equityAllocationPct (percent of equity), or " +
-                "atrBaseFraction+atrK (ATR-scaled equity fraction) — not multiple, not none.");
+                "(fixed dollar), equityAllocationPct (percent of equity), " +
+                "atrBaseFraction+atrK (ATR-scaled), or confidenceMinPct+confidenceMaxPct " +
+                "(confidence-scaled) — not multiple, not none.");
 
         if (allocationPerTrade is { } dollar && dollar <= 0)
             throw new ArgumentOutOfRangeException(
@@ -131,10 +146,22 @@ public sealed class MlStrategy : IStrategy
                 "tighten the hold requirement (exit while confidence weakens, even if " +
                 "still nominally predicting up).");
 
+        if (confidenceMinPct is { } minP && (minP <= 0 || minP > 1))
+            throw new ArgumentOutOfRangeException(nameof(confidenceMinPct),
+                "Confidence min allocation must be in the range (0, 1].");
+        if (confidenceMaxPct is { } maxP && (maxP <= 0 || maxP > 1))
+            throw new ArgumentOutOfRangeException(nameof(confidenceMaxPct),
+                "Confidence max allocation must be in the range (0, 1].");
+        if (confidenceMinPct is { } mn && confidenceMaxPct is { } mx && mn >= mx)
+            throw new ArgumentException(
+                "confidenceMinPct must be strictly less than confidenceMaxPct.");
+
         _allocationPerTrade = allocationPerTrade;
         _equityAllocationPct = equityAllocationPct;
         _atrBaseFraction = atrBaseFraction;
         _atrK = atrK;
+        _confidenceMinPct = confidenceMinPct;       // new
+        _confidenceMaxPct = confidenceMaxPct;       // new
         _diagnosticMode = diagnosticMode;
         _confidenceThreshold = confidenceThreshold;
         _exitThreshold = exitThreshold;
@@ -232,7 +259,28 @@ public sealed class MlStrategy : IStrategy
         {
             _buySignals++;
 
-            if (_atrBaseFraction is not null && _atrK is not null)
+            if (_confidenceMinPct is not null && _confidenceMaxPct is not null)
+            {
+                decimal resolvedFraction = 
+                    ResolveConfidenceScaledFraction(prediction.Probability);
+                _resolvedFractions.Add(resolvedFraction);
+
+                order = new OrderRequest(
+                    data.Symbol,
+                    OrderType.Market,
+                    OrderAction.Buy,
+                    new SizingInstruction.EquityFraction(resolvedFraction));
+
+                _buyOrdersRequested++;
+                decision = "BUY";
+
+                if (_diagnosticMode)
+                    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
+                        accountState.Cash, decision, quantity: null,
+                        reason: $"Confidence-scaled sizing: ConfidenceScore={prediction.Probability:F4} " +
+                                $"-> fraction={resolvedFraction:P2}; shares computed at execution");
+            }
+            else if (_atrBaseFraction is not null && _atrK is not null)
             {
                 // equityFraction = baseFraction / (1 + k * AtrRatio14) — see
                 // handoff doc Position Sizing Checkpoint 3 for derivation.
@@ -483,6 +531,14 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine();
         Console.WriteLine("=============================================");
 
+        if (_resolvedFractions.Count > 0)
+        {
+            var sorted = _resolvedFractions.OrderBy(f => f).ToList();
+            Console.WriteLine($"Allocation Fraction — min: {sorted.First():P2}, " +
+                $"median: {sorted[sorted.Count / 2]:P2}, " +
+                $"mean: {sorted.Average():P2}, max: {sorted.Last():P2}");
+        }
+
         if (_predictionTable.Count > 0)
         {
             Console.WriteLine();
@@ -573,4 +629,22 @@ public sealed class MlStrategy : IStrategy
 
         return fraction;
     }
+
+    private decimal ResolveConfidenceScaledFraction(float confidenceScore)
+    {
+        // Note: ML.NET's Probability output is not guaranteed to be a
+        // calibrated statistical probability — this experiment tests whether
+        // it's directionally useful for sizing, not whether it's "true"
+        // probability. See handoff doc Position Sizing Checkpoint 3, Experiment
+        // 3 for the deferred calibration-check follow-up.
+        decimal range = _confidenceMaxPct!.Value - _confidenceMinPct!.Value;
+        decimal progress = (decimal)((confidenceScore - _confidenceThreshold) / (1f - _confidenceThreshold));
+        decimal fraction = _confidenceMinPct!.Value + progress * range;
+
+        Debug.Assert(fraction >= _confidenceMinPct!.Value && fraction <= _confidenceMaxPct!.Value,
+            $"Confidence-scaled fraction {fraction} violated its bounds invariant.");
+
+        return fraction;
+    }
+
 }
