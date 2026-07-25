@@ -91,6 +91,7 @@ class Program
                 name: "ml-baseline-v2-2000"),
             new MlStrategy(
                 resolvedModelPath,
+                diagnosticMode: true,
                 allocationPerTrade: null,
                 confidenceMinPct: 0.10m,
                 confidenceMaxPct: 0.30m,
