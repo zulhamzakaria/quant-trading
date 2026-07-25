@@ -15,8 +15,7 @@ class Program
     private const decimal StartingCapital = 10_000m;
 
     private const decimal AtrExperimentBaseFraction = 0.20m;
-    private static readonly decimal[] AtrKSweepValues = 
-        {15m, 20m, 25m, 29.9043m, 35m, 40m, 50m};   
+    private static readonly decimal AtrKSweepValues = 15m;  
     static void Main(string[] args)
     {
         string mode = args.Length > 0
@@ -90,17 +89,13 @@ class Program
                 allocationPerTrade: 2000m,
                 equityAllocationPct: null,
                 name: "ml-baseline-v2-2000"),
-        };
-
-        foreach (var k in AtrKSweepValues)
-        {
-            strats.Add(new MlStrategy(
+            new MlStrategy(
                 resolvedModelPath,
                 allocationPerTrade: null,
-                atrBaseFraction: AtrExperimentBaseFraction,
-                atrK: k,
-                name: $"ml-atr-k{k:F1}"));
-        }
+                confidenceMinPct: 0.10m,
+                confidenceMaxPct: 0.30m,
+                name: "ml-confidence-scaled")
+        };
 
         var results = runner.Run(strats, historicalData);
         reporter.PrintReport(results);
