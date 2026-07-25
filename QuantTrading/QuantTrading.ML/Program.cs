@@ -15,8 +15,8 @@ class Program
     private const decimal StartingCapital = 10_000m;
 
     private const decimal AtrExperimentBaseFraction = 0.20m;
-    private const decimal AtrExperimentK = 29.9043m;   // derived: halves at AAPL's 90th-percentile ATR14
-
+    private static readonly decimal[] AtrKSweepValues = 
+        {15m, 20m, 25m, 29.9043m, 35m, 40m, 50m};   
     static void Main(string[] args)
     {
         string mode = args.Length > 0
@@ -90,13 +90,17 @@ class Program
                 allocationPerTrade: 2000m,
                 equityAllocationPct: null,
                 name: "ml-baseline-v2-2000"),
-            new MlStrategy(
+        };
+
+        foreach (var k in AtrKSweepValues)
+        {
+            strats.Add(new MlStrategy(
                 resolvedModelPath,
                 allocationPerTrade: null,
                 atrBaseFraction: AtrExperimentBaseFraction,
-                atrK: AtrExperimentK,
-                name: "ml-atr-scaled-base20-k29_9")
-        };
+                atrK: k,
+                name: $"ml-atr-k{k:F1}"));
+        }
 
         var results = runner.Run(strats, historicalData);
         reporter.PrintReport(results);
