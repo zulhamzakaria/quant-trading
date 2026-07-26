@@ -3,6 +3,7 @@ using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Models;
 using QuantTrading.Simulation.Reporting;
+using QuantTrading.Simulation.Strategies;
 
 namespace QuantTrading.Simulation.Tournament;
 
@@ -90,6 +91,15 @@ public sealed class TournamentRunner
                 LastBarTimestamp: lastBar,
                 EquityCurve: equityCurve,
                 ExposureRatio: exposureRatio));
+
+            // TEMP: diagnostic hook for Experiment 3.
+            // Remove after diagnostic summary is promoted to the reporting pipeline.
+            if (strategy is MlStrategy strat)
+            {
+                var finalState = engine.GetAccountState(strategy);
+                strat.PrintDiagnosticSummary(finalState);
+            }
+
         }
 
         return results;

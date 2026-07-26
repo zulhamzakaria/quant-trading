@@ -2,6 +2,7 @@
 using QuantTrading.Simulation.Analytics;
 using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Models;
+using QuantTrading.Simulation.Strategies;
 
 namespace QuantTrading.Simulation.Reporting;
 
@@ -64,7 +65,6 @@ public sealed class TournamentReporter
                 $"({drawdownAudit.MaxDrawdownPct:P2})");
 
             Console.WriteLine($"Exposure Ratio : {result.ExposureRatio:P1} of period in market");
-
         }
 
         PrintComparativeSummary(allMetrics);
