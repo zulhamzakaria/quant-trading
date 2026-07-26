@@ -94,7 +94,7 @@ class Program
                 allocationPerTrade: null,
                 confidenceMinPct: 0.10m,
                 confidenceMaxPct: 0.30m,
-                //diagnosticMode: true,
+                diagnosticMode: true,
                 name: "ml-confidence-scaled")
         };
 
