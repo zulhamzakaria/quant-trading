@@ -47,6 +47,7 @@ public sealed class MlStrategy : IStrategy
     _falsePredictions;
 
     private readonly List<decimal> _resolvedFractions = new();
+    private readonly List<float> _buyProbabilities = new();
 
     private int _buySignals;
     private int _buyOrdersRequested;
@@ -264,6 +265,7 @@ public sealed class MlStrategy : IStrategy
                 decimal resolvedFraction = 
                     ResolveConfidenceScaledFraction(prediction.Probability);
                 _resolvedFractions.Add(resolvedFraction);
+                _buyProbabilities.Add(prediction.Probability);
 
                 order = new OrderRequest(
                     data.Symbol,
@@ -533,10 +535,11 @@ public sealed class MlStrategy : IStrategy
 
         if (_resolvedFractions.Count > 0)
         {
-            var sorted = _resolvedFractions.OrderBy(f => f).ToList();
-            Console.WriteLine($"Allocation Fraction — min: {sorted.First():P2}, " +
-                $"median: {sorted[sorted.Count / 2]:P2}, " +
-                $"mean: {sorted.Average():P2}, max: {sorted.Last():P2}");
+            Console.WriteLine();
+            PrintPercentiles("Buy Probability", _buyProbabilities);
+
+            var fractionsAsFloat = _resolvedFractions.Select(f => (float)f).ToList();
+            PrintPercentiles("Allocation Fraction", fractionsAsFloat);
         }
 
         if (_predictionTable.Count > 0)
@@ -562,6 +565,14 @@ public sealed class MlStrategy : IStrategy
 
             Console.WriteLine();
         }
+    }
+
+    private void PrintPercentiles(string label, List<float> values)
+    {
+        var sorted = values.OrderBy(v => v).ToList();
+        float Pct(double p) => sorted[(int)Math.Min(sorted.Count - 1, p * (sorted.Count - 1))];
+        Console.WriteLine($"{label} — p10: {Pct(0.10):F4}, p25: {Pct(0.25):F4}, " +
+            $"p50: {Pct(0.50):F4}, p75: {Pct(0.75):F4}, p90: {Pct(0.90):F4}");
     }
 
     private void PrintBarDecision(
