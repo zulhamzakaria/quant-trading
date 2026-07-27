@@ -276,11 +276,13 @@ public sealed class MlStrategy : IStrategy
                 _buyOrdersRequested++;
                 decision = "BUY";
 
-                if (_diagnosticMode)
-                    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
-                        accountState.Cash, decision, quantity: null,
-                        reason: $"ATR-scaled sizing: AtrRatio14={features.AtrRatio14:F6} " +
-                                $"-> fraction={resolvedFraction:P2}; shares computed at execution");
+                //// TEMP-AUDIT
+                //// commenting this so it doesnt get printed too much
+                //if (_diagnosticMode)
+                //    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
+                //        accountState.Cash, decision, quantity: null,
+                //        reason: $"ATR-scaled sizing: AtrRatio14={features.AtrRatio14:F6} " +
+                //                $"-> fraction={resolvedFraction:P2}; shares computed at execution");
             }
             else if (_equityAllocationPct is { } pct)
             {
@@ -293,10 +295,12 @@ public sealed class MlStrategy : IStrategy
                 _buyOrdersRequested++;
                 decision = "BUY";
 
-                if (_diagnosticMode)
-                    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
-                        accountState.Cash, decision, quantity: null,
-                        reason: $"Equity-fraction sizing ({pct:P0}); shares computed at execution");
+                //// TEMP-AUDIT
+                //// commenting this so it doesnt get printed too much
+                //if (_diagnosticMode)
+                //    PrintBarDecision(dateStr, data.Close, prediction, "Flat",
+                //        accountState.Cash, decision, quantity: null,
+                //        reason: $"Equity-fraction sizing ({pct:P0}); shares computed at execution");
             }
             else
             {
