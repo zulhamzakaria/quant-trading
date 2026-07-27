@@ -3,6 +3,7 @@ using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Analytics;
+using QuantTrading.Simulation.Engine;
 using QuantTrading.Simulation.Strategies;
 using QuantTrading.Simulation.Tournament;
 
@@ -16,8 +17,11 @@ namespace QuantTrading.ML.Engine.Experiments;
 // full pre-registration (symbol list, pass rule, tech-only scope caveat).
 public sealed class MultiSymbolGeneralizationExperiment
 {
+    //private static readonly string[] Symbols =
+    //    {"aapl", "amzn", "googl","meta","msft","nvda"};
+    // TEMP-AUDIT
     private static readonly string[] Symbols =
-        {"aapl", "amzn", "googl","meta","msft","nvda"};
+        {"amzn", "meta", "nvda"};
 
     private const int MinTradesForConfidence = 10;
     private const int RequiredPasses = 4; // pre-registered pass bar, see handoff doc
@@ -94,10 +98,21 @@ public sealed class MultiSymbolGeneralizationExperiment
             Console.WriteLine($"BaseObv        — AUC: {baseObvResult.Auc:F4} ({baseObvResult.ModelName})");
             Console.WriteLine($"BaseObvPriceZ  — AUC: {candidateResult.Auc:F4} ({candidateResult.ModelName})");
 
+            //TEMP-AUDIT
+            var strategy = new MlStrategy(
+                candidateResult.Model, 
+                name: symbol, 
+                allocationPerTrade: 2000m, 
+                diagnosticMode: true);
+            var engine = new BacktestEngine();
+            engine.RegisterStrategy(strategy, 10_000m);
+            engine.RunSimulation(marketData);
+            strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
+
             var baseObvMetrics =
                 RunBacktest(baseObvResult, marketData);
             var candidateMetrics =
-                RunBacktest(candidateResult, marketData);
+                RunBacktest(candidateResult, marketData, true);
 
             results.Add(new SymbolResult(
                 Symbol: symbol.ToUpper(),
@@ -121,7 +136,8 @@ public sealed class MultiSymbolGeneralizationExperiment
     // consumes TrainedModelResult.Model directly.
     private StrategyMetrics RunBacktest(
         TrainedModelResult trained,
-        IReadOnlyList<MarketData> marketData)
+        IReadOnlyList<MarketData> marketData,
+        bool diagnosticMode = false)
     {
         MlStrategy strategy = new(
             trained.Model,
@@ -133,6 +149,12 @@ public sealed class MultiSymbolGeneralizationExperiment
             new List<IStrategy> { strategy },
             marketData);
         var result = runResults[0];
+
+        //TEMP-AUDIT
+        if (diagnosticMode)
+            strategy.PrintDiagnosticSummary(result.Trades.Any()
+                ? runner.GetType() is null ? throw new InvalidOperationException() : default!
+                : default!);
 
         return MetricsCalculator.Calculate(
             result.Trades,
