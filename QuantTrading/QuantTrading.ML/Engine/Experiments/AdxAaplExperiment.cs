@@ -30,7 +30,8 @@ public sealed class AdxAaplExperiment
             "AAPL",
             trainingData,
             FeatureSets.BaseAdxFeatures,
-            FeatureSetType.BaseAdx.ToString());
+            FeatureSetType.BaseAdx.ToString(),
+            saveModel:false);
 
         Console.WriteLine($"[RESULT] BaseAdx — Best Algorithm: {result.ModelName}, AUC: {result.Auc:F4}");
 

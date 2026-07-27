@@ -21,7 +21,8 @@ public sealed class AdxObvAaplExperiment
             "AAPL",
             trainingData,
             FeatureSets.BaseAdxObvFeatures,
-            FeatureSetType.BaseAdxObv.ToString());
+            FeatureSetType.BaseAdxObv.ToString(),
+            saveModel: false);
 
         Console.WriteLine($"[RESULT] BaseAdxObv — Best Algorithm: {result.ModelName}, AUC: {result.Auc:F4}");
 

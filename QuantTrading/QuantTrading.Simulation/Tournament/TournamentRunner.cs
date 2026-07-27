@@ -92,13 +92,13 @@ public sealed class TournamentRunner
                 EquityCurve: equityCurve,
                 ExposureRatio: exposureRatio));
 
-            // TEMP: diagnostic hook for Experiment 3.
-            // Remove after diagnostic summary is promoted to the reporting pipeline.
-            if (strategy is MlStrategy strat)
-            {
-                var finalState = engine.GetAccountState(strategy);
-                strat.PrintDiagnosticSummary(finalState);
-            }
+            //// TEMP: diagnostic hook for Experiment 3.
+            //// Remove after diagnostic summary is promoted to the reporting pipeline.
+            //if (strategy is MlStrategy strat)
+            //{
+            //    var finalState = engine.GetAccountState(strategy);
+            //    strat.PrintDiagnosticSummary(finalState);
+            //}
 
         }
 

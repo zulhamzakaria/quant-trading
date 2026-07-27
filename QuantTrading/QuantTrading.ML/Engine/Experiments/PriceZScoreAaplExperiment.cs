@@ -21,7 +21,8 @@ public sealed class PriceZScoreAaplExperiment
             "AAPL",
             trainingData,
             FeatureSets.BaseObvPriceZScoreFeatures,
-            FeatureSetType.BaseObvPriceZScore.ToString());
+            FeatureSetType.BaseObvPriceZScore.ToString(), 
+            saveModel: false);
 
         Console.WriteLine($"[RESULT] BaseObvPriceZScore — Best Algorithm: {result.ModelName}, AUC: {result.Auc:F4}");
     }

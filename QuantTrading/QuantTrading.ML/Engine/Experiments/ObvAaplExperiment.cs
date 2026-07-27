@@ -21,7 +21,8 @@ public sealed class ObvAaplExperiment
             "AAPL",
             trainingData,
             FeatureSets.BaseObvFeatures,
-            FeatureSetType.BaseObv.ToString());
+            FeatureSetType.BaseObv.ToString(), 
+            saveModel: false);
 
         Console.WriteLine($"[RESULT] BaseObv — Best Algorithm: {result.ModelName}, AUC: {result.Auc:F4}");
     }
