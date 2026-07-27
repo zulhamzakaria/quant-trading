@@ -17,67 +17,57 @@ public sealed class ModelTrainer
         string[] featureColumns,
         string featureName)
     {
+        var result = TrainTournament(symbol, data, featureColumns, featureName, saveModel: true);
+        return (result.Auc, result.ModelName);
+    }
+
+    public TrainedModelResult TrainTournament(
+    string symbol,
+    IReadOnlyCollection<TrainingRow> data,
+    string[] featureColumns,
+    string featureName,
+    bool saveModel)
+    {
         if (data is null || data.Count == 0)
             throw new InvalidOperationException("No training data available.");
 
         int totalRows = data.Count;
-
-        // 8:2 split for training and testing
         int trainCount = (int)(totalRows * 0.8);
         var trainRows = data.Take(trainCount).ToList();
         var testRows = data.Skip(trainCount).ToList();
 
-        IDataView trainDataView =
-            _mlContext.Data.LoadFromEnumerable(trainRows);
-        IDataView testDataView =
-            _mlContext.Data.LoadFromEnumerable(testRows);
+        IDataView trainDataView = _mlContext.Data.LoadFromEnumerable(trainRows);
+        IDataView testDataView = _mlContext.Data.LoadFromEnumerable(testRows);
 
-        var featurePipeline = _mlContext.Transforms.Concatenate(
-            "Features", featureColumns);
-
-        string labelColumn =
-            nameof(TrainingRow.IsTomorrowCloseHigher);
+        var featurePipeline = _mlContext.Transforms.Concatenate("Features", featureColumns);
+        string labelColumn = nameof(TrainingRow.IsTomorrowCloseHigher);
 
         var algorithms = new Dictionary<string, IEstimator<ITransformer>>
-        {
-            {"SDCA Logistic Regression (Linear)", _mlContext
-            .BinaryClassification.Trainers
+    {
+        {"SDCA Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
             .SdcaLogisticRegression(labelColumn, "Features")},
-            {"L-BFGS Logistic Regression (Linear)", _mlContext
-            .BinaryClassification.Trainers
+        {"L-BFGS Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
             .LbfgsLogisticRegression(labelColumn, "Features")},
-            {"Fast Tree (Gradient Boosted)", _mlContext
-            .BinaryClassification.Trainers
+        {"Fast Tree (Gradient Boosted)", _mlContext.BinaryClassification.Trainers
             .FastTree(labelColumn, "Features")
-            .Append(_mlContext.BinaryClassification.Calibrators
-            .Platt(labelColumn))},
-            {"Fast Forest (Random Forest Ensemble)", _mlContext
-            .BinaryClassification.Trainers
+            .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))},
+        {"Fast Forest (Random Forest Ensemble)", _mlContext.BinaryClassification.Trainers
             .FastForest(labelColumn, "Features")
-            .Append(_mlContext.BinaryClassification.Calibrators
-            .Platt(labelColumn))}
-        };
+            .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))}
+    };
 
-        //var leaderboard = new List<TournamentResult>();
         string winningModelName = "None";
         ITransformer? bestModel = null;
         double highestAuc = 0.0;
-        //var trainedArtifacts =
-        //    new Dictionary<string, (ITransformer Model, DataViewSchema Schema)>();
 
         foreach (var algo in algorithms)
         {
             try
             {
-                var fullPipeline =
-                    featurePipeline.Append(algo.Value);
-                ITransformer trainedModel =
-                    fullPipeline.Fit(trainDataView);
-
-                IDataView predictions =
-                    trainedModel.Transform(testDataView);
-                var metrics = _mlContext.BinaryClassification
-                    .Evaluate(predictions, labelColumnName: labelColumn);
+                var fullPipeline = featurePipeline.Append(algo.Value);
+                ITransformer trainedModel = fullPipeline.Fit(trainDataView);
+                IDataView predictions = trainedModel.Transform(testDataView);
+                var metrics = _mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: labelColumn);
 
                 if (metrics.AreaUnderRocCurve > highestAuc)
                 {
@@ -85,7 +75,6 @@ public sealed class ModelTrainer
                     winningModelName = algo.Key;
                     bestModel = trainedModel;
                 }
-
             }
             catch (Exception ex)
             {
@@ -94,21 +83,21 @@ public sealed class ModelTrainer
             }
         }
 
-        if (bestModel != null)
-        {
-            //string _bestModelPath = $"{symbol}_{featureName}_best_model.zip";
-            string _bestModelPath = 
-                Path.Combine(AppContext.BaseDirectory, $"{symbol}_{featureName}_best_model.zip");
-            _mlContext.Model.Save(
-                bestModel,
-                trainDataView.Schema,
-                _bestModelPath);
+        if (bestModel is null)
+            throw new InvalidOperationException(
+                $"No algorithm successfully trained for symbol '{symbol}', feature set '{featureName}'. " +
+                "All candidate algorithms failed — check the [ERROR] lines above for individual failures.");
 
-            Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
+        if (saveModel)
+        {
+            string bestModelPath = Path.Combine(AppContext.BaseDirectory, $"{symbol}_{featureName}_best_model.zip");
+            _mlContext.Model.Save(bestModel, trainDataView.Schema, bestModelPath);
+            Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{bestModelPath}'\n");
         }
 
-        return (highestAuc, winningModelName);
-
+        // bestModel and trainDataView.Schema are guaranteed non-null here —
+        // the throw above already ruled out the null case.
+        return new TrainedModelResult(highestAuc, winningModelName, bestModel, trainDataView.Schema, symbol, featureName);
     }
 }
 
