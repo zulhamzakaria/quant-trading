@@ -11,17 +11,17 @@ public sealed class ModelTrainer
         _mlContext = new MLContext(seed: 42);
     }
 
-    public TrainedModelResult TrainTournament(
+    public (double Auc, string ModelName) TrainTournament(
         string symbol,
         IReadOnlyCollection<TrainingRow> data,
         string[] featureColumns,
-        string featureName,
-        bool saveModel)
+        string featureName)
     {
         if (data is null || data.Count == 0)
             throw new InvalidOperationException("No training data available.");
 
         int totalRows = data.Count;
+
         // 8:2 split for training and testing
         int trainCount = (int)(totalRows * 0.8);
         var trainRows = data.Take(trainCount).ToList();
@@ -34,6 +34,7 @@ public sealed class ModelTrainer
 
         var featurePipeline = _mlContext.Transforms.Concatenate(
             "Features", featureColumns);
+
         string labelColumn =
             nameof(TrainingRow.IsTomorrowCloseHigher);
 
@@ -72,6 +73,7 @@ public sealed class ModelTrainer
                     featurePipeline.Append(algo.Value);
                 ITransformer trainedModel =
                     fullPipeline.Fit(trainDataView);
+
                 IDataView predictions =
                     trainedModel.Transform(testDataView);
                 var metrics = _mlContext.BinaryClassification
@@ -92,29 +94,20 @@ public sealed class ModelTrainer
             }
         }
 
-        if (bestModel is null)
-            throw new InvalidOperationException(
-                $"No algorithm successfully trained for symbol '{symbol}', feature set '{featureName}'. " +
-                "All candidate algorithms failed — check the [ERROR] lines above for individual failures.");
-
-
-        if (saveModel)
+        if (bestModel != null)
         {
             //string _bestModelPath = $"{symbol}_{featureName}_best_model.zip";
             string _bestModelPath = 
                 Path.Combine(AppContext.BaseDirectory, $"{symbol}_{featureName}_best_model.zip");
-            _mlContext.Model.Save
-                (bestModel,trainDataView.Schema,_bestModelPath);
+            _mlContext.Model.Save(
+                bestModel,
+                trainDataView.Schema,
+                _bestModelPath);
+
             Console.WriteLine($"[SUCCESS] Gold-Medal Model state written to disk at: '{_bestModelPath}'\n");
         }
 
-        return new TrainedModelResult(
-            highestAuc,
-            winningModelName,
-            bestModel,
-            trainDataView.Schema,
-            symbol,
-            featureName);
+        return (highestAuc, winningModelName);
 
     }
 }
