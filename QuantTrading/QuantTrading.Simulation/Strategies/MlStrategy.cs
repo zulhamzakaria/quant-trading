@@ -89,73 +89,8 @@ public sealed class MlStrategy : IStrategy
                 "Target ML model binary file was not found",
                 modelPath);
 
-        // Exactly one sizing mode must be active. ATR mode requires both
-        // atrBaseFraction and atrK to be set together (a lone value would be
-        // meaningless — the formula needs both), so it's validated as a pair,
-        // not counted twice.
-        bool atrModeSet = atrBaseFraction is not null || atrK is not null;
-        if (atrModeSet && (atrBaseFraction is null || atrK is null))
-            throw new ArgumentException(
-                "atrBaseFraction and atrK must both be specified together, or both left null.");
-
-        bool confidenceModeSet = confidenceMinPct is not null || confidenceMaxPct is not null;
-        if (confidenceModeSet && (confidenceMinPct is null || confidenceMaxPct is null))
-            throw new ArgumentException(
-                "confidenceMinPct and confidenceMaxPct must both be specified together, or both left null.");
-
-        int sizingModesSet =
-            (allocationPerTrade is not null ? 1 : 0) +
-            (equityAllocationPct is not null ? 1 : 0) +
-            (atrModeSet ? 1 : 0) +
-            (confidenceModeSet ? 1 : 0);
-        if (sizingModesSet != 1)
-            throw new ArgumentException(
-                "Exactly one sizing mode must be specified: allocationPerTrade " +
-                "(fixed dollar), equityAllocationPct (percent of equity), " +
-                "atrBaseFraction+atrK (ATR-scaled), or confidenceMinPct+confidenceMaxPct " +
-                "(confidence-scaled) — not multiple, not none.");
-
-        if (allocationPerTrade is { } dollar && dollar <= 0)
-            throw new ArgumentOutOfRangeException(
-                nameof(allocationPerTrade),
-                "Allocation per trade must be greater than zero.");
-        if (equityAllocationPct is { } pct && (pct <= 0 || pct > 1))
-            throw new ArgumentOutOfRangeException(
-                nameof(equityAllocationPct),
-                "Equity allocation percent must be in the range (0, 1].");
-
-        if (atrBaseFraction is { } abf && (abf <= 0 || abf > 1))
-            throw new ArgumentOutOfRangeException(nameof(atrBaseFraction),
-                "ATR base fraction must be in the range (0, 1].");
-        if (atrK is { } k && k <= 0)
-            throw new ArgumentOutOfRangeException(nameof(atrK),
-                "ATR k must be greater than zero — a non-positive k would invert " +
-                "or disable the volatility-shrinkage relationship the formula depends on.");
-
-        if (confidenceThreshold < 0.5f || confidenceThreshold >= 1f)
-            throw new ArgumentOutOfRangeException(
-                nameof(confidenceThreshold),
-                "Confidence threshold must be in the range [0.5, 1.0) — " +
-                "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
-        if (exitThreshold is not null &&
-            (exitThreshold < 0.5f || exitThreshold >= 1f))
-            throw new ArgumentOutOfRangeException(
-                nameof(exitThreshold),
-                "Exit threshold must be in the range [0.5, 1.0) — " +
-                "0.5 disables early exits (prior behavior, no-op since Probability < 0.5 " +
-                "already coincides with PredictedLabel == false); values above 0.5 " +
-                "tighten the hold requirement (exit while confidence weakens, even if " +
-                "still nominally predicting up).");
-
-        if (confidenceMinPct is { } minP && (minP <= 0 || minP > 1))
-            throw new ArgumentOutOfRangeException(nameof(confidenceMinPct),
-                "Confidence min allocation must be in the range (0, 1].");
-        if (confidenceMaxPct is { } maxP && (maxP <= 0 || maxP > 1))
-            throw new ArgumentOutOfRangeException(nameof(confidenceMaxPct),
-                "Confidence max allocation must be in the range (0, 1].");
-        if (confidenceMinPct is { } mn && confidenceMaxPct is { } mx && mn >= mx)
-            throw new ArgumentException(
-                "confidenceMinPct must be strictly less than confidenceMaxPct.");
+        ValidateSizingParameters(allocationPerTrade, equityAllocationPct, atrBaseFraction, atrK, 
+            confidenceMinPct, confidenceMaxPct, confidenceThreshold, exitThreshold);
 
         _allocationPerTrade = allocationPerTrade;
         _equityAllocationPct = equityAllocationPct;
@@ -184,6 +119,44 @@ public sealed class MlStrategy : IStrategy
 
         _predictionEngine = mlContext.Model
             .CreatePredictionEngine<TrainingRow, ModelPrediction>(model);
+
+    }
+
+    public MlStrategy(
+        ITransformer trainedModel,
+        string name,
+        decimal? allocationPerTrade = 2000m,
+        bool diagnosticMode = false,
+        float confidenceThreshold = 0.5f,
+        float? exitThreshold = null,
+        decimal? equityAllocationPct = null,
+        decimal? atrBaseFraction = null,
+        decimal? atrK = null,
+        decimal? confidenceMinPct = null,
+        decimal? confidenceMaxPct = null)
+    {
+        if (trainedModel is null)
+            throw new ArgumentNullException(nameof(trainedModel));
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty or null", nameof(name));
+
+        ValidateSizingParameters(
+            allocationPerTrade, equityAllocationPct, atrBaseFraction, atrK,
+            confidenceMinPct, confidenceMaxPct, confidenceThreshold, exitThreshold);
+
+        _allocationPerTrade = allocationPerTrade;
+        _equityAllocationPct = equityAllocationPct;
+        _atrBaseFraction = atrBaseFraction;
+        _atrK = atrK;
+        _confidenceMinPct = confidenceMinPct;
+        _confidenceMaxPct = confidenceMaxPct;
+        _diagnosticMode = diagnosticMode;
+        _confidenceThreshold = confidenceThreshold;
+        _exitThreshold = exitThreshold;
+        _name = name;
+
+        var mlContext = new MLContext(seed: 42);
+        _predictionEngine = mlContext.Model.CreatePredictionEngine<TrainingRow, ModelPrediction>(trainedModel);
 
     }
 
@@ -262,7 +235,7 @@ public sealed class MlStrategy : IStrategy
 
             if (_confidenceMinPct is not null && _confidenceMaxPct is not null)
             {
-                decimal resolvedFraction = 
+                decimal resolvedFraction =
                     ResolveConfidenceScaledFraction(prediction.Probability);
                 _resolvedFractions.Add(resolvedFraction);
                 _buyProbabilities.Add(prediction.Probability);
@@ -660,4 +633,71 @@ public sealed class MlStrategy : IStrategy
         return fraction;
     }
 
+    private static void ValidateSizingParameters(
+        decimal? allocationPerTrade,
+        decimal? equityAllocationPct,
+        decimal? atrBaseFraction,
+        decimal? atrK,
+        decimal? confidenceMinPct,
+        decimal? confidenceMaxPct,
+        float confidenceThreshold,
+        float? exitThreshold)
+    {
+        bool atrModeSet = atrBaseFraction is not null || atrK is not null;
+        if (atrModeSet && (atrBaseFraction is null || atrK is null))
+            throw new ArgumentException(
+                "atrBaseFraction and atrK must both be specified together, or both left null.");
+
+        bool confidenceModeSet = confidenceMinPct is not null || confidenceMaxPct is not null;
+        if (confidenceModeSet && (confidenceMinPct is null || confidenceMaxPct is null))
+            throw new ArgumentException(
+                "confidenceMinPct and confidenceMaxPct must both be specified together, or both left null.");
+
+        int sizingModesSet =
+            (allocationPerTrade is not null ? 1 : 0) +
+            (equityAllocationPct is not null ? 1 : 0) +
+            (atrModeSet ? 1 : 0) +
+            (confidenceModeSet ? 1 : 0);
+        if (sizingModesSet != 1)
+            throw new ArgumentException(
+                "Exactly one sizing mode must be specified: allocationPerTrade " +
+                "(fixed dollar), equityAllocationPct (percent of equity), " +
+                "atrBaseFraction+atrK (ATR-scaled), or confidenceMinPct+confidenceMaxPct " +
+                "(confidence-scaled) — not multiple, not none.");
+
+        if (allocationPerTrade is { } dollar && dollar <= 0)
+            throw new ArgumentOutOfRangeException(nameof(allocationPerTrade),
+                "Allocation per trade must be greater than zero.");
+        if (equityAllocationPct is { } pct && (pct <= 0 || pct > 1))
+            throw new ArgumentOutOfRangeException(nameof(equityAllocationPct),
+                "Equity allocation percent must be in the range (0, 1].");
+        if (atrBaseFraction is { } abf && (abf <= 0 || abf > 1))
+            throw new ArgumentOutOfRangeException(nameof(atrBaseFraction),
+                "ATR base fraction must be in the range (0, 1].");
+        if (atrK is { } k && k <= 0)
+            throw new ArgumentOutOfRangeException(nameof(atrK),
+                "ATR k must be greater than zero — a non-positive k would invert " +
+                "or disable the volatility-shrinkage relationship the formula depends on.");
+        if (confidenceThreshold < 0.5f || confidenceThreshold >= 1f)
+            throw new ArgumentOutOfRangeException(nameof(confidenceThreshold),
+                "Confidence threshold must be in the range [0.5, 1.0) — " +
+                "0.5 means no filtering; values below 0.5 or at/above 1.0 are not meaningful.");
+        if (exitThreshold is not null && (exitThreshold < 0.5f || exitThreshold >= 1f))
+            throw new ArgumentOutOfRangeException(nameof(exitThreshold),
+                "Exit threshold must be in the range [0.5, 1.0) — " +
+                "0.5 disables early exits (prior behavior, no-op since Probability < 0.5 " +
+                "already coincides with PredictedLabel == false); values above 0.5 " +
+                "tighten the hold requirement (exit while confidence weakens, even if " +
+                "still nominally predicting up).");
+        if (confidenceMinPct is { } minP && (minP <= 0 || minP > 1))
+            throw new ArgumentOutOfRangeException(nameof(confidenceMinPct),
+                "Confidence min allocation must be in the range (0, 1].");
+        if (confidenceMaxPct is { } maxP && (maxP <= 0 || maxP > 1))
+            throw new ArgumentOutOfRangeException(nameof(confidenceMaxPct),
+                "Confidence max allocation must be in the range (0, 1].");
+        if (confidenceMinPct is { } mn && confidenceMaxPct is { } mx && mn >= mx)
+            throw new ArgumentException(
+                "confidenceMinPct must be strictly less than confidenceMaxPct.");
+
+    }
 }

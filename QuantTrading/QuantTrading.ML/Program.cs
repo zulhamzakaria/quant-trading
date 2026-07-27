@@ -55,6 +55,9 @@ class Program
                 var rsiBars = new LocalCsvParser().ParseFile(rsiCsvPath);
                 RsiValidation.RunComparison(rsiBars);
                 break;
+            case "study-multisymbol":
+                new MultiSymbolGeneralizationExperiment().Run();
+                break;
             default:
                 PrintUsage();
                 break;
