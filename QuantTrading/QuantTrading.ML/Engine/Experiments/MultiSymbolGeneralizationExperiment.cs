@@ -98,21 +98,21 @@ public sealed class MultiSymbolGeneralizationExperiment
             Console.WriteLine($"BaseObv        — AUC: {baseObvResult.Auc:F4} ({baseObvResult.ModelName})");
             Console.WriteLine($"BaseObvPriceZ  — AUC: {candidateResult.Auc:F4} ({candidateResult.ModelName})");
 
+            var baseObvMetrics =
+                RunBacktest(baseObvResult, marketData);
+            var candidateMetrics =
+                RunBacktest(candidateResult, marketData);
+
             //TEMP-AUDIT
             var strategy = new MlStrategy(
-                candidateResult.Model, 
-                name: symbol, 
-                allocationPerTrade: 2000m, 
+                candidateResult.Model,
+                name: symbol,
+                allocationPerTrade: 2000m,
                 diagnosticMode: true);
             var engine = new BacktestEngine();
             engine.RegisterStrategy(strategy, 10_000m);
             engine.RunSimulation(marketData);
             strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
-
-            var baseObvMetrics =
-                RunBacktest(baseObvResult, marketData);
-            var candidateMetrics =
-                RunBacktest(candidateResult, marketData, true);
 
             results.Add(new SymbolResult(
                 Symbol: symbol.ToUpper(),
@@ -136,8 +136,7 @@ public sealed class MultiSymbolGeneralizationExperiment
     // consumes TrainedModelResult.Model directly.
     private StrategyMetrics RunBacktest(
         TrainedModelResult trained,
-        IReadOnlyList<MarketData> marketData,
-        bool diagnosticMode = false)
+        IReadOnlyList<MarketData> marketData)
     {
         MlStrategy strategy = new(
             trained.Model,
@@ -149,12 +148,6 @@ public sealed class MultiSymbolGeneralizationExperiment
             new List<IStrategy> { strategy },
             marketData);
         var result = runResults[0];
-
-        //TEMP-AUDIT
-        if (diagnosticMode)
-            strategy.PrintDiagnosticSummary(result.Trades.Any()
-                ? runner.GetType() is null ? throw new InvalidOperationException() : default!
-                : default!);
 
         return MetricsCalculator.Calculate(
             result.Trades,
