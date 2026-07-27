@@ -108,11 +108,14 @@ public sealed class MultiSymbolGeneralizationExperiment
                 candidateResult.Model,
                 name: symbol,
                 allocationPerTrade: 2000m,
+                confidenceMinPct: 0.10m,
+                confidenceMaxPct: 0.30m,
                 diagnosticMode: true);
             var engine = new BacktestEngine();
             engine.RegisterStrategy(strategy, 10_000m);
             engine.RunSimulation(marketData);
             strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
+            //---
 
             results.Add(new SymbolResult(
                 Symbol: symbol.ToUpper(),

@@ -526,6 +526,9 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine();
         Console.WriteLine("=============================================");
 
+        //TEMP-AUDIT
+        Console.WriteLine($"Buy Probability: {_buyProbabilities.Count}");
+
         if (_resolvedFractions.Count > 0)
         {
             Console.WriteLine();
