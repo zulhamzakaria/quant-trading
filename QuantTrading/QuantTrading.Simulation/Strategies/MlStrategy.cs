@@ -319,16 +319,18 @@ public sealed class MlStrategy : IStrategy
                     _buyOrdersRequested++;
                     decision = "BUY";
 
-                    if (_diagnosticMode)
-                        PrintBarDecision(
-                            dateStr,
-                            data.Close,
-                            prediction,
-                            "Flat",
-                            accountState.Cash,
-                            decision,
-                            targetShares,
-                            reason: null);
+                    //// TEMP-AUDIT
+                    //// commenting this so it doesnt get printed too much
+                    //if (_diagnosticMode)
+                    //    PrintBarDecision(
+                    //        dateStr,
+                    //        data.Close,
+                    //        prediction,
+                    //        "Flat",
+                    //        accountState.Cash,
+                    //        decision,
+                    //        targetShares,
+                    //        reason: null);
 
                 }
                 else
@@ -336,16 +338,19 @@ public sealed class MlStrategy : IStrategy
                     _rejectedOrders++;
                     decision = "HOLD";
                     reason = "Position size calculated to zero";
-                    if (_diagnosticMode)
-                        PrintBarDecision(
-                            dateStr,
-                            data.Close,
-                            prediction,
-                            "Flat",
-                            accountState.Cash,
-                            decision,
-                            quantity: null,
-                            reason);
+
+                    //// TEMP-AUDIT
+                    //// commenting this so it doesnt get printed too much
+                    //if (_diagnosticMode)
+                    //    PrintBarDecision(
+                    //        dateStr,
+                    //        data.Close,
+                    //        prediction,
+                    //        "Flat",
+                    //        accountState.Cash,
+                    //        decision,
+                    //        quantity: null,
+                    //        reason);
                 }
             }
         }
@@ -386,16 +391,18 @@ public sealed class MlStrategy : IStrategy
                     ? $"Early exit on weak confidence (Probability={prediction.Probability:F2} < exitThreshold={_exitThreshold:F2})"
                     : null;
 
-                if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        $"Long ({heldQty})",
-                        accountState.Cash,
-                        decision,
-                        quantity: heldQty,
-                        reason: exitReason);
+                //// TEMP-AUDIT
+                //// commenting this so it doesnt get printed too much
+                //if (_diagnosticMode)
+                //    PrintBarDecision(
+                //        dateStr,
+                //        data.Close,
+                //        prediction,
+                //        $"Long ({heldQty})",
+                //        accountState.Cash,
+                //        decision,
+                //        quantity: heldQty,
+                //        reason: exitReason);
             }
             else
             {
@@ -403,16 +410,18 @@ public sealed class MlStrategy : IStrategy
                 decision = "HOLD";
                 reason = "Position open but size reported as zero";
 
-                if (_diagnosticMode)
-                    PrintBarDecision(
-                        dateStr,
-                        data.Close,
-                        prediction,
-                        "Long (0)",
-                        accountState.Cash,
-                        decision,
-                        quantity: null,
-                        reason);
+                //// TEMP-AUDIT
+                //// commenting this so it doesnt get printed too much
+                //if (_diagnosticMode)
+                //    PrintBarDecision(
+                //        dateStr,
+                //        data.Close,
+                //        prediction,
+                //        "Long (0)",
+                //        accountState.Cash,
+                //        decision,
+                //        quantity: null,
+                //        reason);
             }
         }
         else if (prediction.PredictedLabel && hasPosition)
@@ -425,14 +434,17 @@ public sealed class MlStrategy : IStrategy
             {
                 int heldQuantity =
                     accountState.GetPositionSize(data.Symbol);
-                PrintBarDecision(
-                    dateStr,
-                    data.Close,
-                    prediction, $"Long ({heldQuantity})",
-                    accountState.Cash,
-                    decision,
-                    quantity: null,
-                    reason);
+
+                //// TEMP-AUDIT
+                //// commenting this so it doesnt get printed too much
+                //PrintBarDecision(
+                //    dateStr,
+                //    data.Close,
+                //    prediction, $"Long ({heldQuantity})",
+                //    accountState.Cash,
+                //    decision,
+                //    quantity: null,
+                //    reason);
             }
         }
         else
@@ -451,16 +463,18 @@ public sealed class MlStrategy : IStrategy
                 reason = "No position to exit";
             }
 
-            if (_diagnosticMode)
-                PrintBarDecision(
-                    dateStr,
-                    data.Close,
-                    prediction,
-                    "Flat",
-                    accountState.Cash,
-                    decision,
-                    quantity: null,
-                    reason);
+            //// TEMP-AUDIT
+            //// commenting this so it doesnt get printed too much
+            //if (_diagnosticMode)
+            //    PrintBarDecision(
+            //        dateStr,
+            //        data.Close,
+            //        prediction,
+            //        "Flat",
+            //        accountState.Cash,
+            //        decision,
+            //        quantity: null,
+            //        reason);
 
         }
 
