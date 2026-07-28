@@ -21,7 +21,7 @@ public sealed class MultiSymbolGeneralizationExperiment
     //    {"aapl", "amzn", "googl","meta","msft","nvda"};
     // TEMP-AUDIT
     private static readonly string[] Symbols =
-        {"amzn", "meta", "nvda"};
+        {"amzn"};
 
     private const int MinTradesForConfidence = 10;
     private const int RequiredPasses = 4; // pre-registered pass bar, see handoff doc
@@ -107,7 +107,7 @@ public sealed class MultiSymbolGeneralizationExperiment
             var strategy = new MlStrategy(
                 candidateResult.Model,
                 name: symbol,
-                allocationPerTrade: 2000m,
+                allocationPerTrade: null,
                 confidenceMinPct: 0.10m,
                 confidenceMaxPct: 0.30m,
                 diagnosticMode: true);

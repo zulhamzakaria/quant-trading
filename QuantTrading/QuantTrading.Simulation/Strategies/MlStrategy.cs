@@ -49,6 +49,9 @@ public sealed class MlStrategy : IStrategy
     private readonly List<decimal> _resolvedFractions = new();
     private readonly List<float> _buyProbabilities = new();
 
+    //TEMP-AUDIT
+    private readonly List<float> _allPredictionProbabilities = new();
+
     private int _buySignals;
     private int _buyOrdersRequested;
     private int _sellSignals;
@@ -188,6 +191,8 @@ public sealed class MlStrategy : IStrategy
         }
 
         _predictionsGenerated++;
+        //TEMP-AUDIT
+        _allPredictionProbabilities.Add(prediction.Probability);
 
         if (prediction.PredictedLabel)
             _truePredictions++;
@@ -526,16 +531,26 @@ public sealed class MlStrategy : IStrategy
         Console.WriteLine();
         Console.WriteLine("=============================================");
 
-        //TEMP-AUDIT
-        Console.WriteLine($"Buy Probability: {_buyProbabilities.Count}");
-
         if (_resolvedFractions.Count > 0)
         {
+            //TEMP-AUDIT
+            Console.WriteLine($"Positive-class probabilities recorded: {_buyProbabilities.Count}");
+
             Console.WriteLine();
             PrintPercentiles("Buy Probability", _buyProbabilities);
 
             var fractionsAsFloat = _resolvedFractions.Select(f => (float)f).ToList();
             PrintPercentiles("Allocation Fraction", fractionsAsFloat);
+        }
+
+        //TEMP-AUDIT
+        if (_allPredictionProbabilities.Count > 0)
+        {
+            int below50 = _allPredictionProbabilities.Count(p => p < 0.5f);
+            int aboveOrEqual50 = _allPredictionProbabilities.Count(p => p >= 0.5f);
+            Console.WriteLine($"Probability samples collected: {_allPredictionProbabilities.Count} " +
+                $"(below 0.50: {below50}, at/above 0.50: {aboveOrEqual50})");
+            PrintPercentiles("Probability samples collected", _allPredictionProbabilities);
         }
 
         if (_predictionTable.Count > 0)
