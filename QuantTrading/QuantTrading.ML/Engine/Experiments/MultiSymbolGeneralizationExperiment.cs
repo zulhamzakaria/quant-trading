@@ -115,6 +115,10 @@ public sealed class MultiSymbolGeneralizationExperiment
             engine.RegisterStrategy(strategy, 10_000m);
             engine.RunSimulation(marketData);
             strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
+
+            var upDays = trainingData.Count(x => x.IsTomorrowCloseHigher);
+            double upRatio = (double)upDays / trainingData.Count * 100;
+            Console.WriteLine($"Class balance: {upRatio:F1}% Up / {100 - upRatio:F1}% Down ({trainingData.Count} rows)");
             //---
 
             results.Add(new SymbolResult(
