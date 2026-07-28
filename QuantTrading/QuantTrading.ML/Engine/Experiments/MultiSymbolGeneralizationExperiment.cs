@@ -21,7 +21,7 @@ public sealed class MultiSymbolGeneralizationExperiment
     //    {"aapl", "amzn", "googl","meta","msft","nvda"};
     // TEMP-AUDIT
     private static readonly string[] Symbols =
-        {"amzn"};
+        {"amzn","amzn","amzn","amzn","amzn"};
 
     private const int MinTradesForConfidence = 10;
     private const int RequiredPasses = 4; // pre-registered pass bar, see handoff doc
@@ -103,18 +103,18 @@ public sealed class MultiSymbolGeneralizationExperiment
             var candidateMetrics =
                 RunBacktest(candidateResult, marketData);
 
-            //TEMP-AUDIT
-            var strategy = new MlStrategy(
-                candidateResult.Model,
-                name: symbol,
-                allocationPerTrade: null,
-                confidenceMinPct: 0.10m,
-                confidenceMaxPct: 0.30m,
-                diagnosticMode: true);
-            var engine = new BacktestEngine();
-            engine.RegisterStrategy(strategy, 10_000m);
-            engine.RunSimulation(marketData);
-            strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
+            ////TEMP-AUDIT
+            //var strategy = new MlStrategy(
+            //    candidateResult.Model,
+            //    name: symbol,
+            //    allocationPerTrade: null,
+            //    confidenceMinPct: 0.10m,
+            //    confidenceMaxPct: 0.30m,
+            //    diagnosticMode: true);
+            //var engine = new BacktestEngine();
+            //engine.RegisterStrategy(strategy, 10_000m);
+            //engine.RunSimulation(marketData);
+            //strategy.PrintDiagnosticSummary(engine.GetAccountState(strategy));
 
             var upDays = trainingData.Count(x => x.IsTomorrowCloseHigher);
             double upRatio = (double)upDays / trainingData.Count * 100;

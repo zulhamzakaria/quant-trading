@@ -60,6 +60,7 @@ public sealed class ModelTrainer
         ITransformer? bestModel = null;
         double highestAuc = 0.0;
 
+
         foreach (var algo in algorithms)
         {
             try
@@ -68,6 +69,18 @@ public sealed class ModelTrainer
                 ITransformer trainedModel = fullPipeline.Fit(trainDataView);
                 IDataView predictions = trainedModel.Transform(testDataView);
                 var metrics = _mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: labelColumn);
+
+                // New — log every algorithm's AUC, not just whichever wins.
+                // Purely additive diagnostic logging, no behavior change. Needed
+                // to separate "is a specific algorithm unstable across runs" from
+                // "did a different algorithm just happen to win this time" —
+                // the winner-only view can't distinguish these.
+                Console.WriteLine($"  [ALGO] {algo.Key,-40} " +
+                    $"AUC: {metrics.AreaUnderRocCurve:F4}, " +
+                    $"ACC: {metrics.Accuracy:F4}, " +
+                    $"+ PREC: {metrics.PositivePrecision:F4} " +
+                    $"+ RECL: {metrics.PositiveRecall:F4} " +
+                    $"FI: {metrics.F1Score:F4}");
 
                 if (metrics.AreaUnderRocCurve > highestAuc)
                 {
