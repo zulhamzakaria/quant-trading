@@ -43,18 +43,18 @@ public sealed class ModelTrainer
         string labelColumn = nameof(TrainingRow.IsTomorrowCloseHigher);
 
         var algorithms = new Dictionary<string, IEstimator<ITransformer>>
-    {
-        {"SDCA Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
-            .SdcaLogisticRegression(labelColumn, "Features")},
-        {"L-BFGS Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
-            .LbfgsLogisticRegression(labelColumn, "Features")},
-        {"Fast Tree (Gradient Boosted)", _mlContext.BinaryClassification.Trainers
-            .FastTree(labelColumn, "Features")
-            .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))},
-        {"Fast Forest (Random Forest Ensemble)", _mlContext.BinaryClassification.Trainers
-            .FastForest(labelColumn, "Features")
-            .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))}
-    };
+        {
+            {"SDCA Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
+                .SdcaLogisticRegression(labelColumn, "Features")},
+            {"L-BFGS Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
+                .LbfgsLogisticRegression(labelColumn, "Features")},
+            {"Fast Tree (Gradient Boosted)", _mlContext.BinaryClassification.Trainers
+                .FastTree(labelColumn, "Features")
+                .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))},
+            {"Fast Forest (Random Forest Ensemble)", _mlContext.BinaryClassification.Trainers
+                .FastForest(labelColumn, "Features")
+                .Append(_mlContext.BinaryClassification.Calibrators.Platt(labelColumn))}
+        };
 
         string winningModelName = "None";
         ITransformer? bestModel = null;
