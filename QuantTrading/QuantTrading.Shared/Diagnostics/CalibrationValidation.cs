@@ -143,7 +143,7 @@ public static class CalibrationValidation
             {
                 var metrics =
                     mlContext.BinaryClassification.Evaluate(
-                        predictions, 
+                        predictions,
                         labelColumnName: LabelColumn);
                 auc = metrics.AreaUnderRocCurve;
             }
@@ -181,17 +181,20 @@ public static class CalibrationValidation
             // calibration is exactly what this experiment is checking.
             Console.WriteLine($"  Post-calibration AUC: {postCalibMetrics.AreaUnderRocCurve:F4} " +
                 $"(pre-calibration was {highestAuc:F4})");
+
+            // Pre-calibration comparison point, explicitly labeled: this model's
+            // OWN raw Score, scored via its own (auto-appended, in-sample-fit)
+            // calibration where one exists — NOT a fair "uncalibrated" baseline
+            // in the strict sense, since e.g. FastTree auto-calibrates on the
+            // full training set. Included anyway as a labeled reference point,
+            // not withheld — a flawed comparison is more useful than none.
+            Console.WriteLine($"  Brier Score (trainer-produced probabilities): " +
+                $"{ComputeBrierScore(mlContext, scoredTestData):F4}");
             Console.WriteLine($"  Brier Score (post-calibration): {ComputeBrierScore(mlContext, calibratedTestData):F4}");
 
-            // Pre-calibration Brier too, for a genuine before/after comparison —
-            // uses raw Score run through a simple sigmoid-free proxy isn't
-            // valid, so instead we report pre-calibration AUC as the ranking
-            // baseline and Brier only where Probability is meaningfully defined
-            // (i.e. post-calibration). Pre-calibration probability quality for
-            // FastTree/FastForest is exactly what's broken today (see
-            // ModelTrainer's Platt-on-training-data defect) — not reported
-            // here as a second Brier number to avoid comparing calibrated
-            // Brier against an already-known-broken baseline.
+            Console.WriteLine("  Reliability diagram — PRE-calibration:");
+            PrintReliabilityDiagram(mlContext, scoredTestData);
+            Console.WriteLine("  Reliability diagram — POST-calibration (held-out Platt):");
             PrintReliabilityDiagram(mlContext, calibratedTestData);
         }
 
@@ -212,7 +215,10 @@ public static class CalibrationValidation
     // make deciles (~20-25 samples/bin) too thin to read reliably.
     private static void PrintReliabilityDiagram(MLContext mlContext, IDataView predictions)
     {
-        var rows = mlContext.Data.CreateEnumerable<CalibrationPredictionRow>(predictions, reuseRowObject: false).ToList();
+        var rows = mlContext
+            .Data.CreateEnumerable<CalibrationPredictionRow>(predictions, reuseRowObject: false)
+            .ToList();
+
         if (rows.Count == 0)
         {
             Console.WriteLine("  Reliability diagram: no rows to bin.");
