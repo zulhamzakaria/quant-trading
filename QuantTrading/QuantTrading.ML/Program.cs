@@ -3,6 +3,7 @@ using QuantTrading.ML.Engine;
 using QuantTrading.ML.Engine.Experiments;
 using QuantTrading.Shared.Contracts;
 using QuantTrading.Shared.Diagnostics;
+using QuantTrading.Shared.Features;
 using QuantTrading.Simulation.Reporting;
 using QuantTrading.Simulation.Strategies;
 using QuantTrading.Simulation.Tournament;
@@ -15,7 +16,7 @@ class Program
     private const decimal StartingCapital = 10_000m;
 
     private const decimal AtrExperimentBaseFraction = 0.20m;
-    private static readonly decimal AtrKSweepValues = 15m;  
+    private static readonly decimal AtrKSweepValues = 15m;
     static void Main(string[] args)
     {
         string mode = args.Length > 0
@@ -57,6 +58,14 @@ class Program
                 break;
             case "study-multisymbol":
                 new MultiSymbolGeneralizationExperiment().Run();
+                break;
+            case "validate-calibration":
+                string calibCsvPath = Path.Combine(AppContext.BaseDirectory, CsvPath);
+                var calibMarketData = new LocalCsvParser().ParseFile(calibCsvPath);
+                var calibTrainingData = new FeatureGenerator().ComputeTrainingRows(calibMarketData);
+                CalibrationValidation.RunComparison(
+                    "AAPL", calibTrainingData, FeatureSets.BaseObvPriceZScoreFeatures,
+                    FeatureSetType.BaseObvPriceZScore.ToString());
                 break;
             default:
                 PrintUsage();
