@@ -124,16 +124,35 @@ public static class CalibrationValidation
                 fullPipeline.Fit(trainDataView);
             IDataView predictions =
                 trainedModel.Transform(testDataView);
-            var metrics =
-                mlContext.BinaryClassification.Evaluate(
-                    predictions,
-                    labelColumnName: LabelColumn);
 
-            Console.WriteLine($"  [ALGO] {algo.Key,-40} AUC: {metrics.AreaUnderRocCurve:F4}");
+            // FastForest doesn't produce a Probability column by default (unlike
+            // SDCA/L-BFGS/FastTree, which are calibrated automatically) — verified
+            // via dotnet/machinelearning#4517. Evaluate() requires Probability and
+            // throws without it; EvaluateNonCalibrated() only needs Score/PredictedLabel.
+            double auc;
 
-            if (metrics.AreaUnderRocCurve > highestAuc)
+            if (algo.Key.Contains("Fast Forest"))
             {
-                highestAuc = metrics.AreaUnderRocCurve;
+                var ncMetrics =
+                    mlContext.BinaryClassification.EvaluateNonCalibrated(
+                        predictions,
+                        labelColumnName: LabelColumn);
+                auc = ncMetrics.AreaUnderRocCurve;
+            }
+            else
+            {
+                var metrics =
+                    mlContext.BinaryClassification.Evaluate(
+                        predictions, 
+                        labelColumnName: LabelColumn);
+                auc = metrics.AreaUnderRocCurve;
+            }
+
+            Console.WriteLine($"  [ALGO] {algo.Key,-40} AUC: {auc:F4}");
+
+            if (auc > highestAuc)
+            {
+                highestAuc = auc;
                 winningModelName = algo.Key;
                 bestUncalibrated = trainedModel;
             }
