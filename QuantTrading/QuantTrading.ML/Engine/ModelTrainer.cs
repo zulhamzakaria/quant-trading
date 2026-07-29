@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML;
+using Microsoft.ML.Trainers;
 using QuantTrading.Shared.Models;
 
 namespace QuantTrading.ML.Engine;
@@ -42,10 +43,21 @@ public sealed class ModelTrainer
         var featurePipeline = _mlContext.Transforms.Concatenate("Features", featureColumns);
         string labelColumn = nameof(TrainingRow.IsTomorrowCloseHigher);
 
+        var options = new SdcaLogisticRegressionBinaryTrainer.Options
+        {
+            LabelColumnName = labelColumn,
+            FeatureColumnName = "Features",
+            Shuffle = false,          // disable epoch shuffling
+            NumberOfThreads = 1,      // single-threaded for reproducibility
+            ConvergenceTolerance = 0.01F // optional: tighter tolerance
+        };
+
         var algorithms = new Dictionary<string, IEstimator<ITransformer>>
         {
+            //{"SDCA Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
+            //    .SdcaLogisticRegression(labelColumn, "Features")},
             {"SDCA Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
-                .SdcaLogisticRegression(labelColumn, "Features")},
+                .SdcaLogisticRegression(options)},
             {"L-BFGS Logistic Regression (Linear)", _mlContext.BinaryClassification.Trainers
                 .LbfgsLogisticRegression(labelColumn, "Features")},
             {"Fast Tree (Gradient Boosted)", _mlContext.BinaryClassification.Trainers
