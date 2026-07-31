@@ -28,26 +28,10 @@ public class BacktestEngineTests
             count: 21,
             price: 100m);
 
-        var bar22 = MarketDataBuilder.Bar(
-            Symbol,
-            warmup[^1].Timestamp.AddDays(1),
-            open: 100m,
-            close: 100m);
-        var bar23 = MarketDataBuilder.Bar(
-            Symbol,
-            bar22.Timestamp.AddDays(1),
-            open: 100m,
-            close: 100m);
-        var bar24 = MarketDataBuilder.Bar(
-            Symbol,
-            bar23.Timestamp.AddDays(1),
-            open: 100m,
-            close: 100m);
-        var bar25 = MarketDataBuilder.Bar(
-            Symbol,
-            bar24.Timestamp.AddDays(1),
-            open: 100m,
-            close: 100m);
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
+        var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // 1st buy fills here
+        var bar24 = MarketDataBuilder.Bar(Symbol, bar23.Timestamp.AddDays(1), open: 110m, close: 110m); // 2nd buy fills here (overwrite)
+        var bar25 = MarketDataBuilder.Bar(Symbol, bar24.Timestamp.AddDays(1), open: 120m, close: 120m); // sell fills here
 
         var feed = warmup.Concat([bar22, bar23, bar24, bar25])
             .ToList();
