@@ -25,4 +25,14 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Common\Builders\" />
+    <Folder Include="Common\Fakes\" />
+    <Folder Include="Common\TestData\" />
+    <Folder Include="Integration\" />
+    <Folder Include="Shared\Execution\" />
+    <Folder Include="Simulation\Engine\" />
+    <Folder Include="Simulation\Analytics\" />
+  </ItemGroup>
+
 </Project>
