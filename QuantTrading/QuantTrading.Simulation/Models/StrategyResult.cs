@@ -13,7 +13,3 @@ public sealed record StrategyResult(
     public decimal TotalReturn =>
         (EndingPortfolioValue - StartingCapital) / StartingCapital * 100m;
 };
-
-public sealed record EquityPoint(
-    DateTime Timestamp,
-    decimal Equity);
