@@ -3,11 +3,17 @@ using QuantTrading.Shared.Execution;
 using QuantTrading.Shared.Features;
 using QuantTrading.Shared.Models;
 using QuantTrading.Simulation.Models;
+using System.Diagnostics;
 
 namespace QuantTrading.Simulation.Engine;
 
 public sealed class BacktestEngine
 {
+    // Represents one open buy lot: a distinct entry (price, timestamp, shares)
+    // not yet fully consumed by a Sell. Consumed FIFO — oldest lot first.
+    // Kept private/internal to BacktestEngine; not part of any public contract.
+    private sealed record Lot(decimal Price, DateTime Timestamp, int Shares);
+
     private readonly List<IStrategy> _strategies = new();
     private readonly Dictionary<IStrategy, StrategyAccountState>
         _strategyAccounts = new();
@@ -20,10 +26,26 @@ public sealed class BacktestEngine
     private readonly Dictionary<IStrategy, List<CompletedTrade>>
         _completedTrades = new();
 
-    private readonly
-        Dictionary<IStrategy, Dictionary<string, (decimal price, DateTime timeStamp)>>
-        _entryPrices = new();
-
+    // Per symbol, an ordered list of open buy lots (FIFO: index 0 = oldest,
+    // consumed first by a Sell). Replaces the earlier single-tuple design,
+    // which silently overwrote the entry price on a second Buy before any
+    // Sell, and dropped trade records entirely on any partial Sell.
+    //
+    // List<Lot>, not Queue<Lot>: a partial Sell must mutate the front lot's
+    // remaining Shares in place while leaving it at the front. Queue<T> only
+    // supports Dequeue (removes) and Enqueue (adds to the back) — it cannot
+    // express "peek and update the front element," which this algorithm needs
+    // on every partial-lot consumption. List<Lot> supports indexed read/write
+    // at [0] directly.
+    //
+    // List.RemoveAt(0) is O(n) in the number of currently-open lots for one
+    // symbol — not total trade history. That count is bounded by how many
+    // un-closed buys are outstanding at once (realistically single digits),
+    // so this is not a performance concern at this project's scale. Revisit
+    // only if a strategy's typical open-lot count grows materially.
+    private readonly Dictionary
+        <IStrategy, Dictionary<string, List<Lot>>>
+        _entryLots = new();
 
     private readonly FeatureGenerator _featureGenerator = new();
     private readonly Dictionary<string, List<MarketData>>
@@ -54,8 +76,7 @@ public sealed class BacktestEngine
             new StrategyAccountState(startingCash, currency);
         _pendingOrders[strategy] = null;
         _completedTrades[strategy] = new List<CompletedTrade>();
-        _entryPrices[strategy] =
-            new Dictionary<string, (decimal, DateTime)>
+        _entryLots[strategy] = new Dictionary<string, List<Lot>>
             (StringComparer.OrdinalIgnoreCase);
         _equityCurves[strategy] =
             new List<EquityPoint>();
@@ -114,7 +135,7 @@ public sealed class BacktestEngine
                         bar.Open,
                         bar.Timestamp,
                         _completedTrades[strategy],
-                        _entryPrices[strategy]);
+                        _entryLots[strategy]);
                     _pendingOrders[strategy] = null;
                 }
 
@@ -125,8 +146,8 @@ public sealed class BacktestEngine
                 try
                 {
                     request = strategy.OnData(
-                        bar, 
-                        features, 
+                        bar,
+                        features,
                         account);
                 }
                 catch (Exception ex)
@@ -170,7 +191,7 @@ public sealed class BacktestEngine
         decimal executionPrice,
         DateTime executionTimestamp,
         List<CompletedTrade> completedTrades,
-        Dictionary<string, (decimal price, DateTime timestamp)> entryPrices)
+        Dictionary<string, List<Lot>> entryLots)
     {
         if (executionPrice <= 0)
             return;
@@ -198,8 +219,12 @@ public sealed class BacktestEngine
                     quantity,
                     isExit: false);
 
-                entryPrices[request.Symbol] =
-                    (executionPrice, executionTimestamp);
+                if (!entryLots.TryGetValue(request.Symbol, out var lots))
+                {
+                    lots = new List<Lot>();
+                    entryLots[request.Symbol] = lots;
+                }
+                lots.Add(new Lot(executionPrice, executionTimestamp, quantity));
             }
         }
         else if (request.Action == OrderAction.Sell)
@@ -216,18 +241,56 @@ public sealed class BacktestEngine
                         quantity,
                         isExit: true);
 
-                    if (entryPrices.TryGetValue
-                        (request.Symbol, out var entry))
+                    // Consume open lots FIFO (oldest first). A single Sell
+                    // can close out more than one lot, or partially consume
+                    // one — each lot's realized portion is recorded as its
+                    // own CompletedTrade. A CompletedTrade therefore
+                    // represents one lot's shares (fully or partially)
+                    // realized against one Sell execution — not a full
+                    // position close, and not one record per Sell order.
+                    if (entryLots.TryGetValue(request.Symbol, out var lots))
                     {
-                        completedTrades.Add(new CompletedTrade(
-                            Symbol: request.Symbol,
-                            EntryPrice: entry.price,
-                            ExitPrice: executionPrice,
-                            Quantity: quantity,
-                            EntryTimestamp: entry.timestamp,
-                            ExitTimestamp: executionTimestamp));
-                        entryPrices.Remove(request.Symbol);
+                        int remainingToSell = quantity;
+
+                        while (remainingToSell > 0 && lots.Count > 0)
+                        {
+                            var lot = lots[0];
+                            int consumed = Math.Min(remainingToSell, lot.Shares);
+
+                            completedTrades.Add(new CompletedTrade(
+                                Symbol: request.Symbol,
+                                EntryPrice: lot.Price,
+                                ExitPrice: executionPrice,
+                                Quantity: consumed,
+                                EntryTimestamp: lot.Timestamp,
+                                ExitTimestamp: executionTimestamp));
+
+                            if (consumed == lot.Shares)
+                                lots.RemoveAt(0);
+                            else
+                                lots[0] = lot with { Shares = lot.Shares - consumed };
+
+                            remainingToSell -= consumed;
+                        }
+
+                        // Accounting invariant: open lot shares for this symbol
+                        // must always equal the account's recorded position
+                        // size. _entryLots and account._positions are only ever
+                        // mutated together, in this method, on the Buy/Sell
+                        // branches above — so this cannot currently diverge.
+                        // Asserted as insurance against a future change
+                        // breaking that pairing, not a currently-reachable
+                        // failure. Debug.Assert (not a thrown exception) to
+                        // match this project's existing convention for
+                        // mathematically-guaranteed invariants (see
+                        // MlStrategy.ResolveAtrScaledFraction/
+                        // ResolveConfidenceScaledFraction in the handoff doc).
+                        int openLotShares = lots.Sum(l => l.Shares);
+                        Debug.Assert(
+                            openLotShares == account.GetPositionSize(request.Symbol),
+                            "Open lot share total diverged from account position size.");
                     }
+
                 }
             }
         }
@@ -300,20 +363,23 @@ public sealed class BacktestEngine
     }
 
     // Returns the entry timestamp for a strategy's currently open position in
-    // a symbol, or null if no position is open. Same reporting-accessor
-    // pattern as GetEquityCurve/GetCompletedTrades/GetAccountState — read-only
-    // simulation state exposed for post-run analysis, not used by simulation
-    // logic itself.
+    // a symbol, or null if no position is open. Under FIFO lot tracking, "the"
+    // entry timestamp for an open position is defined as the OLDEST still-open
+    // lot's timestamp (front of the list) — i.e. how long the position has
+    // been open continuously, which is what ExposureAudit needs. Same
+    // reporting-accessor pattern as GetEquityCurve/GetCompletedTrades/
+    // GetAccountState — read-only simulation state exposed for post-run
+    // analysis, not used by simulation logic itself.
     public DateTime? GetOpenPositionEntryTimestamp(IStrategy strategy, string symbol)
     {
         if (strategy is null)
             throw new ArgumentNullException(nameof(strategy));
-        if (!_entryPrices.TryGetValue(strategy, out var symbolEntries))
+        if (!_entryLots.TryGetValue(strategy, out var symbolLots))
             throw new KeyNotFoundException(
                 "No active account state registry found for the provided strategy instance.");
 
-        return symbolEntries.TryGetValue(symbol, out var entry)
-            ? entry.timeStamp
+        return symbolLots.TryGetValue(symbol, out var lots) && lots.Count > 0
+            ? lots[0].Timestamp
             : null;
     }
 }
