@@ -1,7 +1,6 @@
 ﻿using FluentAssertions;
 using QuantTrading.Shared.Execution;
 using QuantTrading.Simulation.Engine;
-using QuantTrading.Simulation.Models;
 using QuantTrading.Test.Common.Builders;
 using QuantTrading.Test.Common.Fakes;
 
@@ -10,6 +9,7 @@ namespace QuantTrading.Test.Simulation.Engine;
 public class BacktestEngineTests
 {
     private const string Symbol = "AAPL";
+    public const int WarmupBarsRequired = 21;
 
     // Guards against: BacktestEngine.ExecuteOrder's _entryPrices dictionary
     // storing a single (price, timestamp) tuple per symbol. A second Buy
@@ -24,7 +24,7 @@ public class BacktestEngineTests
     public void Given_TwoBuysBeforeOneFullExitSell_When_PositionIsFullyClosed_Then_TotalRealizedPnLReflectsBothEntryPrices()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: 21, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // 1st buy fills here
@@ -85,7 +85,7 @@ public class BacktestEngineTests
     public void Given_PartialSellFollowedByRemainderSell_When_BothExecute_Then_BothRealizedTradesAttributeToTheOriginalEntry()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: 21, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here
@@ -140,7 +140,7 @@ public class BacktestEngineTests
     public void Given_SellSpansThreeLotsWithThirdOnlyPartiallyConsumed_When_SellExecutes_Then_EachLotIsCorrectlyAttributedAndTheRemainderStaysOpen()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: 21, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // lot A fills here
@@ -191,5 +191,152 @@ public class BacktestEngineTests
         accountState.GetPositionSize(Symbol).Should().Be(2);
         accountState.HasPositionOpen(Symbol).Should().BeTrue();
         engine.GetOpenPositionEntryTimestamp(strategy, Symbol).Should().Be(bar25.Timestamp);
+    }
+
+    // Financial Invariant, not a Regression test — no known bug here, protecting
+    // currently-correct behavior against a future accidental change. Cash must
+    // never be debited, and no position/trade may be recorded, for a Buy the
+    // account cannot afford — ExecuteOrder's cash-sufficiency guard must remain
+    // an all-or-nothing gate, not something that partially executes.
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_BuyOrderExceedsAvailableCash_When_OrderIsExecuted_Then_NoStateIsMutated()
+    {
+        // Arrange
+        const decimal startingCash = 500m; // deliberately less than the Buy's cost
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
+        var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // attempted buy fills here
+
+        var feed = warmup.Concat([bar22, bar23]).ToList();
+
+        var strategy = new ScriptedStrategy(new OrderRequest?[]
+        {
+            // 10 shares @ ~100 = 1000, but only 500 cash is available.
+            new OrderRequest(Symbol, OrderType.Market, OrderAction.Buy, new SizingInstruction.FixedQuantity(10)),
+        });
+
+        var engine = new BacktestEngine();
+        engine.RegisterStrategy(strategy, startingCash);
+
+        // Act
+        engine.RunSimulation(feed);
+        var accountState = engine.GetAccountState(strategy);
+        var completedTrades = engine.GetCompletedTrades(strategy);
+
+        // Assert
+        accountState.Cash.Should().Be(startingCash); // nothing debited
+        accountState.HasPositionOpen(Symbol).Should().BeFalse();
+        accountState.GetPositionSize(Symbol).Should().Be(0);
+        completedTrades.Should().BeEmpty();
+    }
+
+    // Financial Invariant — Sell-side mirror of the insufficient-cash test. A Sell
+    // requesting more shares than are actually held must be an all-or-nothing
+    // no-op: no cash credited, no position change, no CompletedTrade recorded —
+    // not a partial fill of whatever shares happen to be available.
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_SellOrderExceedsHeldShares_When_OrderIsExecuted_Then_NoStateIsMutated()
+    {
+        // Arrange
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
+        var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here
+        var bar24 = MarketDataBuilder.Bar(Symbol, bar23.Timestamp.AddDays(1), open: 110m, close: 110m); // attempted oversized sell fills here
+
+        var feed = warmup.Concat([bar22, bar23, bar24]).ToList();
+
+        var strategy = new ScriptedStrategy(new OrderRequest?[]
+        {
+            // Buy 5 shares
+            new OrderRequest(Symbol, OrderType.Market, OrderAction.Buy,  new SizingInstruction.FixedQuantity(5)),
+            // Then requests 10.
+            new OrderRequest(Symbol, OrderType.Market, OrderAction.Sell, new SizingInstruction.FixedQuantity(10)),
+        });
+
+        var engine = new BacktestEngine();
+        engine.RegisterStrategy(strategy, startingCash: 10_000m);
+
+        // Act
+        engine.RunSimulation(feed);
+        var accountState = engine.GetAccountState(strategy);
+        var completedTrades = engine.GetCompletedTrades(strategy);
+
+        // Assert
+        accountState.Cash.Should().Be(10_000m - (5 * 100m)); // only the buy's cost was ever debited
+        accountState.HasPositionOpen(Symbol).Should().BeTrue();
+        accountState.GetPositionSize(Symbol).Should().Be(5); // unchanged by the failed sell
+        completedTrades.Should().BeEmpty(); // the failed sell recorded nothing
+    }
+
+    // Business Rule — a pending order must be cancelled, not executed or carried
+    // forward, if the bar it would execute against is invalid (Open <= 0 or
+    // Close <= 0). Observable behavior only: no state mutation from the
+    // cancelled order, and the engine must recover and keep calling the
+    // strategy on the next valid bar.
+    [Trait("Category", "Business Rule")]
+    [Fact]
+    public void Given_PendingOrder_When_NextBarIsInvalid_Then_OrderIsCancelledNotExecuted()
+    {
+        // Arrange
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
+        var invalidBar = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 0m, close: 0m); // Buy would have fired here
+        var bar24 = MarketDataBuilder.Bar(Symbol, invalidBar.Timestamp.AddDays(1), open: 105m, close: 105m); // engine should recover here
+
+        var feed = warmup.Concat([bar22, invalidBar, bar24]).ToList();
+
+        var strategy = new ScriptedStrategy(new OrderRequest?[]
+        {
+        new OrderRequest(Symbol, OrderType.Market, OrderAction.Buy, new SizingInstruction.FixedQuantity(10)),
+        });
+
+        var engine = new BacktestEngine();
+        engine.RegisterStrategy(strategy, startingCash: 10_000m);
+
+        // Act
+        engine.RunSimulation(feed);
+        var accountState = engine.GetAccountState(strategy);
+
+        // Assert
+        accountState.HasPositionOpen(Symbol).Should().BeFalse(); // cancelled, not executed
+        accountState.Cash.Should().Be(10_000m); // nothing debited
+        strategy.CallCount.Should().Be(2); // engine kept calling OnData on bar22 and bar24;
+                                           // invalid bar is skipped entirely, never triggers OnData
+    }
+
+    // Business Rule — a pending order still unexecuted at the end of the feed
+    // must be discarded, not force-executed or carried into a hypothetical next
+    // run. Observable behavior: the position it would have closed remains open.
+    [Trait("Category", "Business Rule")]
+    [Fact]
+    public void Given_PendingOrder_When_EndOfFeedIsReached_Then_OrderIsDiscardedNotExecuted()
+    {
+        // Arrange
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
+        var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here, sell then goes pending
+
+        var feed = warmup.Concat([bar22, bar23]).ToList(); // feed ends here — no bar for the sell to execute against
+
+        var strategy = new ScriptedStrategy(new OrderRequest?[]
+        {
+        new OrderRequest(Symbol, OrderType.Market, OrderAction.Buy,  new SizingInstruction.FixedQuantity(10)),
+        new OrderRequest(Symbol, OrderType.Market, OrderAction.Sell, new SizingInstruction.FixedQuantity(10)),
+        });
+
+        var engine = new BacktestEngine();
+        engine.RegisterStrategy(strategy, startingCash: 10_000m);
+
+        // Act
+        engine.RunSimulation(feed);
+        var accountState = engine.GetAccountState(strategy);
+        var completedTrades = engine.GetCompletedTrades(strategy);
+
+        // Assert
+        accountState.HasPositionOpen(Symbol).Should().BeTrue(); // sell never executed
+        accountState.GetPositionSize(Symbol).Should().Be(10);
+        completedTrades.Should().BeEmpty(); // no phantom exit recorded
     }
 }
