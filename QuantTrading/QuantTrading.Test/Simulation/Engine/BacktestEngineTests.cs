@@ -339,4 +339,55 @@ public class BacktestEngineTests
         accountState.GetPositionSize(Symbol).Should().Be(10);
         completedTrades.Should().BeEmpty(); // no phantom exit recorded
     }
+
+    // Financial Invariant — pins down the FULL T+1-Open execution contract, not
+    // just "not same-bar." Signal-bar Close, T+1 Open, and T+1 Close are all
+    // deliberately distinct values here, so a match against the wrong one is
+    // unambiguous rather than coincidental (the existing tests 1-3 use flat bars
+    // where Open==Close, so they exercise T+1 timing but can't actually
+    // distinguish which specific rule ran).
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_SignalGeneratedOnBarT_When_NextBarArrives_Then_OrderExecutesAtBarTPlusOneOpenNotCloseOrSameBar()
+    {
+        // Arrange
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: 21, price: 100m);
+
+        // Signal bar — OnData fires here, strategy returns Buy. Close (105) must
+        // NOT be the execution price (would indicate same-bar execution).
+        var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 105m);
+
+        // T+1 — Buy should execute at this bar's Open (110), not its Close (115).
+        var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 110m, close: 115m);
+
+        // T+2 — Sell should execute at this bar's Open (120), not its Close (125).
+        var bar24 = MarketDataBuilder.Bar(Symbol, bar23.Timestamp.AddDays(1), open: 120m, close: 125m);
+
+        var feed = warmup.Concat([bar22, bar23, bar24]).ToList();
+
+        var strategy = new ScriptedStrategy(new OrderRequest?[]
+        {
+        new OrderRequest(Symbol, OrderType.Market, OrderAction.Buy,  new SizingInstruction.FixedQuantity(10)),
+        new OrderRequest(Symbol, OrderType.Market, OrderAction.Sell, new SizingInstruction.FixedQuantity(10)),
+        });
+
+        var engine = new BacktestEngine();
+        engine.RegisterStrategy(strategy, startingCash: 10_000m);
+
+        // Act
+        engine.RunSimulation(feed);
+        var completedTrades = engine.GetCompletedTrades(strategy);
+
+        // Assert
+        completedTrades.Should().HaveCount(1);
+
+        var trade = completedTrades[0];
+
+        // Rules out same-bar (105) and T+1-Close (115) in one check.
+        trade.EntryPrice.Should().Be(110m);
+        trade.EntryTimestamp.Should().Be(bar23.Timestamp);
+
+        trade.ExitPrice.Should().Be(120m);
+        trade.ExitTimestamp.Should().Be(bar24.Timestamp);
+    }
 }
