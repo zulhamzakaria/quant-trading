@@ -6,6 +6,7 @@ public static class MarketDataBuilder
 {
     private static readonly DateTime BaseDate =
         new(2024, 1, 1);
+    public const int WarmupBarsRequired = 21;
 
     /// Flat warm-up bars: Open=High=Low=Close=price, strictly increasing daily timestamps.
     public static List<MarketData> FlatBars(

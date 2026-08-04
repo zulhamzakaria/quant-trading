@@ -9,7 +9,7 @@ namespace QuantTrading.Test.Simulation.Engine;
 public class BacktestEngineTests
 {
     private const string Symbol = "AAPL";
-    public const int WarmupBarsRequired = 21;
+    //public const int WarmupBarsRequired = 21;
 
     // Guards against: BacktestEngine.ExecuteOrder's _entryPrices dictionary
     // storing a single (price, timestamp) tuple per symbol. A second Buy
@@ -24,7 +24,7 @@ public class BacktestEngineTests
     public void Given_TwoBuysBeforeOneFullExitSell_When_PositionIsFullyClosed_Then_TotalRealizedPnLReflectsBothEntryPrices()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // 1st buy fills here
@@ -85,7 +85,7 @@ public class BacktestEngineTests
     public void Given_PartialSellFollowedByRemainderSell_When_BothExecute_Then_BothRealizedTradesAttributeToTheOriginalEntry()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here
@@ -140,7 +140,7 @@ public class BacktestEngineTests
     public void Given_SellSpansThreeLotsWithThirdOnlyPartiallyConsumed_When_SellExecutes_Then_EachLotIsCorrectlyAttributedAndTheRemainderStaysOpen()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
 
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // lot A fills here
@@ -204,7 +204,7 @@ public class BacktestEngineTests
     {
         // Arrange
         const decimal startingCash = 500m; // deliberately less than the Buy's cost
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // attempted buy fills here
 
@@ -240,7 +240,7 @@ public class BacktestEngineTests
     public void Given_SellOrderExceedsHeldShares_When_OrderIsExecuted_Then_NoStateIsMutated()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here
         var bar24 = MarketDataBuilder.Bar(Symbol, bar23.Timestamp.AddDays(1), open: 110m, close: 110m); // attempted oversized sell fills here
@@ -280,7 +280,7 @@ public class BacktestEngineTests
     public void Given_PendingOrder_When_NextBarIsInvalid_Then_OrderIsCancelledNotExecuted()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var invalidBar = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 0m, close: 0m); // Buy would have fired here
         var bar24 = MarketDataBuilder.Bar(Symbol, invalidBar.Timestamp.AddDays(1), open: 105m, close: 105m); // engine should recover here
@@ -314,7 +314,7 @@ public class BacktestEngineTests
     public void Given_PendingOrder_When_EndOfFeedIsReached_Then_OrderIsDiscardedNotExecuted()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: WarmupBarsRequired, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
         var bar22 = MarketDataBuilder.Bar(Symbol, warmup[^1].Timestamp.AddDays(1), open: 100m, close: 100m);
         var bar23 = MarketDataBuilder.Bar(Symbol, bar22.Timestamp.AddDays(1), open: 100m, close: 100m); // buy fills here, sell then goes pending
 
@@ -351,7 +351,7 @@ public class BacktestEngineTests
     public void Given_SignalGeneratedOnBarT_When_NextBarArrives_Then_OrderExecutesAtBarTPlusOneOpenNotCloseOrSameBar()
     {
         // Arrange
-        var warmup = MarketDataBuilder.FlatBars(Symbol, count: 21, price: 100m);
+        var warmup = MarketDataBuilder.FlatBars(Symbol, count: MarketDataBuilder.WarmupBarsRequired, price: 100m);
 
         // Signal bar — OnData fires here, strategy returns Buy. Close (105) must
         // NOT be the execution price (would indicate same-bar execution).
