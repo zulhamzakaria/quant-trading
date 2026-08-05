@@ -7,7 +7,6 @@ public static class MetricsCalculator
     public static StrategyMetrics Calculate(
         IReadOnlyCollection<CompletedTrade> trades,
         decimal startingCapital,
-        decimal endingPortfolioValue,
         DateTime firstBarTimestamp,
         DateTime lastBarTimestamp,
         IReadOnlyList<EquityPoint> equityCurve)
@@ -18,6 +17,23 @@ public static class MetricsCalculator
             throw new ArgumentOutOfRangeException(
                 nameof(startingCapital),
                 "Starting capital must be greater than zero.");
+        if (lastBarTimestamp < firstBarTimestamp)
+            throw new ArgumentException(
+                "lastBarTimestamp must not precede firstBarTimestamp.",
+                nameof(lastBarTimestamp));
+        // Single source of truth: endingPortfolioValue is no longer a
+        // separately-supplied parameter — it is always the equity curve's
+        // final point. Removes the possibility of a caller passing
+        // inconsistent ending-value/equity-curve data. Requires a non-empty
+        // equityCurve; BacktestEngine appends one point per processed bar,
+        // so this holds for any simulation that ran at least one bar.
+        if (equityCurve is null || equityCurve.Count == 0)
+            throw new ArgumentException(
+                "equityCurve must contain at least one point; it is now the " +
+                "sole source of the ending portfolio value.",
+                nameof(equityCurve));
+
+        decimal endingPortfolioValue = equityCurve[^1].Equity;
 
         double totalDays =
             (lastBarTimestamp - firstBarTimestamp).TotalDays;
@@ -63,13 +79,24 @@ public static class MetricsCalculator
         var losers = trades.Where(t => t.RealizedPnL < 0).ToList();
         var breakEven = trades.Where(t => t.RealizedPnL == 0).ToList();
 
-        decimal winRate = (decimal)winners.Count / tradeCount * 100m;
+        // WinRate excludes break-even trades from both numerator and
+        // denominator (Wins / (Wins + Losses)) — a break-even trade is
+        // neither a win nor a loss, and should not dilute the rate. Null
+        // when there are no decisive (win or loss) trades at all.
+        int decisiveTradeCount = winners.Count + losers.Count;
+        decimal? winRate = decisiveTradeCount > 0
+            ? (decimal)winners.Count / decisiveTradeCount * 100m
+            : null;
 
         decimal? avgGain = winners.Count > 0
             ? winners.Average(t => t.RealizedPnL)
             : null;
+
+        // AvgLoss is reported as a positive magnitude, consistent with
+        // GrossLoss's existing Math.Abs convention — previously negative-
+        // signed with no other field agreeing on that convention.
         decimal? avgLoss = losers.Count > 0
-            ? losers.Average(t => t.RealizedPnL)
+            ? Math.Abs(losers.Average(t => t.RealizedPnL))
             : null;
 
         decimal grossProfit = winners.Sum(t => t.RealizedPnL);
@@ -79,15 +106,25 @@ public static class MetricsCalculator
             ? grossProfit / grossLoss
             : null;
 
+        // Expectancy intentionally uses TOTAL trade count (including
+        // break-evens) as its denominator, not the decisive-trade count
+        // WinRate now uses — Expectancy means "average $ per trade taken,"
+        // and a break-even trade is a legitimate zero-outcome trade for
+        // that purpose. Deliberate difference from WinRate's denominator,
+        // not an inconsistency.
         decimal? expectancy = null;
         if (avgGain.HasValue || avgLoss.HasValue)
         {
-            decimal lossRate =
+            decimal winRateOfTotal = 
+                (decimal)winners.Count / tradeCount;
+            decimal lossRateOfTotal =
                 (decimal)losers.Count / tradeCount;
             decimal winContribution =
-                (winRate / 100m) * (avgGain ?? 0m);
+                (winRateOfTotal) * (avgGain ?? 0m);
+            // avgLoss is now a positive magnitude, so its contribution to
+            // expectancy must be explicitly negated.
             decimal lossContribution =
-                lossRate * (avgLoss ?? 0m);
+                -lossRateOfTotal * (avgLoss ?? 0m);
             expectancy = winContribution + lossContribution;
         }
 

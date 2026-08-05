@@ -159,7 +159,6 @@ public sealed class MultiSymbolGeneralizationExperiment
         return MetricsCalculator.Calculate(
             result.Trades,
             result.StartingCapital,
-            result.EndingPortfolioValue,
             result.FirstBarTimestamp,
             result.LastBarTimestamp,
             result.EquityCurve);

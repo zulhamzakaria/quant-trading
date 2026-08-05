@@ -38,7 +38,6 @@ public sealed class TournamentReporter
             .Select(r => (Result: r, Metrics: MetricsCalculator.Calculate(
                 r.Trades,
                 r.StartingCapital,
-                r.EndingPortfolioValue,
                 r.FirstBarTimestamp,
                 r.LastBarTimestamp,
                 r.EquityCurve)))
