@@ -14,11 +14,20 @@ public sealed class FeatureGenerator
     // shared among some of the indicators
     private const int StandardWindow = 20;
 
+    // Single source of truth for the "enough bars to compute anything"
+    // check — previously this exact condition was copy-pasted independently
+    // in four places (ComputeTrainingRows, ComputeTrainingRow,
+    // ComputeMarketFeatures, ComputeMarketFeaturesSeries), risking silent
+    // drift if only one copy were ever edited. Pure extraction: same
+    // condition, same MinBarRequired value, no behavior change.
+    private static bool HasSufficientBars(IReadOnlyList<MarketData>? bars)
+        => bars is not null && bars.Count >= MinBarRequired;
+
     public IReadOnlyList<TrainingRow> ComputeTrainingRows
         (IReadOnlyList<MarketData> bars)
     {
         List<TrainingRow> featureList = new();
-        if (bars is null || bars.Count < MinBarRequired)
+        if (!HasSufficientBars(bars))
             return featureList;
 
         for (int i = StandardWindow; i < bars.Count - 1; i++)
@@ -41,7 +50,7 @@ public sealed class FeatureGenerator
     public TrainingRow? ComputeTrainingRow
         (IReadOnlyList<MarketData> bars)
     {
-        if (bars is null || bars.Count < MinBarRequired)
+        if (!HasSufficientBars(bars))
             return null;
 
         var features = ComputeMarketFeaturesAt
@@ -56,7 +65,7 @@ public sealed class FeatureGenerator
     public MarketFeatures? ComputeMarketFeatures
         (IReadOnlyList<MarketData> bars)
     {
-        if (bars is null || bars.Count < MinBarRequired)
+        if (!HasSufficientBars(bars))
             return null;
 
         return ComputeMarketFeaturesAt(bars, bars.Count - 1);
@@ -72,7 +81,7 @@ public sealed class FeatureGenerator
         (IReadOnlyList<MarketData> bars)
     {
         var results = new List<MarketFeatures>();
-        if (bars is null || bars.Count < MinBarRequired)
+        if (!HasSufficientBars(bars))
             return results;
 
         for (int i = StandardWindow; i < bars.Count; i++)
