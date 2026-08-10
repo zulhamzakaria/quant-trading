@@ -135,12 +135,14 @@ public class FeatureGeneratorTests
     public void Given_AlternatingPriceSeries_When_FeaturesAreComputed_Then_AtrAndRsiMatchIndependentlyComputedValues()
     {
         // Arrange — alternating changes of exactly +10/-10 every day.
+        // Parity chosen so the final (current) bar lands on 100, not 110 —
+        // 110 has a factor of 11, which breaks AtrRatio14's exact termination.
         var generator = new FeatureGenerator();
         var bars = new List<QuantTrading.Shared.Models.MarketData>();
         var timestamp = new DateTime(2024, 1, 1);
         for (int i = 0; i <= 21; i++)
         {
-            decimal close = (i % 2 == 0) ? 100m : 110m;
+            decimal close = (i % 2 == 0) ? 110m : 100m;
             bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(i), open: close, close: close));
         }
 
@@ -150,14 +152,42 @@ public class FeatureGeneratorTests
         // Assert
         features.Should().NotBeNull();
 
-        // ATR: every day's True Range is identically 10 -> a Wilder-recursion fixed
-        // point, exact by construction (verified across all 7 recursive steps via
-        // independent Fraction arithmetic, not just the seed).
-        features!.AtrRatio14.Should().Be(0.1m); // avgAtr(10) / current.Close(100)
+        // ATR: every day's True Range is identically 10 -> Wilder-recursion fixed
+        // point, exact by construction. current.Close = 100 -> 10/100 = 0.1 exact.
+        features!.AtrRatio14.Should().Be(0.1m);
 
-        // RSI: gain/loss alternates, so the recursion genuinely does not terminate
-        // in decimal (denominator includes 7^7 from repeated /14 steps) — a
-        // tolerance-based comparison is the honest choice here, not a compromise.
-        features.Rsi14.Should().BeApproximately(52.9541865m, 0.0000001m);
+        // RSI: gain/loss alternates, recursion doesn't terminate in decimal
+        // (denominator includes 7^7) — tolerance-based comparison, computed
+        // independently via exact Fraction arithmetic.
+        features.Rsi14.Should().BeApproximately(47.0458135m, 0.0000001m);
+    }
+    // ADX's DX-averaging has an undocumented behavioral discontinuity: below 14
+    // accumulated DX values it falls back to a plain average; at 14+ it switches
+    // to full Wilder-smoothed averaging. Every prior test (4, 5) used the
+    // minimum 22-bar setup, which only ever reaches 8 DX values — meaning the
+    // Wilder-smoothed branch has never actually been exercised until this test.
+    // Scoped as sanity, not exact-value: ADX's DM/DI/DX chain is too deep to
+    // hand-derive reliably without TA-Lib (unavailable in this sandbox) — see
+    // ledger's Reference Validation gap. Proves both branches are reachable and
+    // produce bounded, valid output; does NOT prove the transition is smooth.
+    [Trait("Category", "Business Rule")]
+    [Fact]
+    public void Given_BarCountBelowAndAboveTheAdxFallbackThreshold_When_FeaturesAreComputed_Then_Adx14IsValidInBothBranches()
+    {
+        var generator = new FeatureGenerator();
+
+        // Fallback branch: dxList.Count = index-13 < 14 -> index < 27 -> 27 bars.
+        var bars27 = MarketDataBuilder.FlatBars("AAPL", count: 27, price: 100m);
+        // Main Wilder-smoothed branch: index >= 27 -> 28 bars.
+        var bars28 = MarketDataBuilder.FlatBars("AAPL", count: 28, price: 100m);
+
+        var fallback = generator.ComputeMarketFeatures(bars27);
+        var main = generator.ComputeMarketFeatures(bars28);
+
+        fallback.Should().NotBeNull();
+        main.Should().NotBeNull();
+
+        fallback!.Adx14.Should().BeInRange(0m, 100m);
+        main!.Adx14.Should().BeInRange(0m, 100m);
     }
 }
