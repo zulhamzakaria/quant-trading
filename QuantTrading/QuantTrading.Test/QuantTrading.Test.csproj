@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\QuantTrading.Infrastructure\QuantTrading.Infrastructure.csproj" />
     <ProjectReference Include="..\QuantTrading.Simulation\QuantTrading.Simulation.csproj" />
   </ItemGroup>
 
