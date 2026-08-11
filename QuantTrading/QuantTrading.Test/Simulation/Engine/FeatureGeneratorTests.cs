@@ -190,4 +190,54 @@ public class FeatureGeneratorTests
         fallback!.Adx14.Should().BeInRange(0m, 100m);
         main!.Adx14.Should().BeInRange(0m, 100m);
     }
+    // Documents CURRENT fallback behavior, not an endorsement it's the correct
+    // long-term semantic — see ledger's "SCHEDULED DECISION" entry for the
+    // open question (does 1.0/0 wrongly imply a real reading vs. "undefined"?).
+    // Confirmed unreachable via real project data (YAGNI, deferred).
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_ZeroSumWindow_When_FeaturesAreComputed_Then_FallbacksFireOnlyForTheirOwnFieldNotOthers()
+    {
+        var generator = new FeatureGenerator();
+        var timestamp = new DateTime(2024, 1, 1);
+        var bars = new List<QuantTrading.Shared.Models.MarketData>();
+
+        bars.Add(MarketDataBuilder.Bar("AAPL", timestamp, open: 100m, close: 100m, volume: 0m));
+        bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(1), open: 100m, close: 100m, volume: 0m));
+        for (int i = 2; i <= 16; i++)
+            bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(i), open: 0m, close: 0m, volume: 0m));
+        for (int i = 17; i <= 20; i++)
+            bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(i), open: -25m, close: -25m, volume: 0m));
+        bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(21), open: 100m, close: 100m, volume: 0m));
+
+        var features = generator.ComputeMarketFeatures(bars);
+
+        features.Should().NotBeNull();
+        features!.Sma20Ratio.Should().Be(1.0m);
+        features.Sma5Ratio.Should().Be(1.0m);
+        features.Return5D.Should().Be(0m);
+        features.VolumeRatio.Should().Be(1.0m);
+
+        features.Return1D.Should().Be(-5.0m);
+        features.BollingerStdDev20.Should().Be(25m);
+        features.PriceZScore20.Should().Be(4.0m);
+    }
+
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_CurrentBarCloseIsZero_When_FeaturesAreComputed_Then_AtrRatio14FallsBackToZero()
+    {
+        var generator = new FeatureGenerator();
+        var timestamp = new DateTime(2024, 1, 1);
+        var bars = new List<QuantTrading.Shared.Models.MarketData>();
+
+        for (int i = 0; i <= 20; i++)
+            bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(i), open: 100m, close: 100m));
+        bars.Add(MarketDataBuilder.Bar("AAPL", timestamp.AddDays(21), open: 0m, close: 0m));
+
+        var features = generator.ComputeMarketFeatures(bars);
+
+        features.Should().NotBeNull();
+        features!.AtrRatio14.Should().Be(0m);
+    }
 }
