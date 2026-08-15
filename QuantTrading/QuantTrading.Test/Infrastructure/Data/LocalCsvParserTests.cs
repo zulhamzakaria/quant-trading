@@ -72,4 +72,69 @@ public class LocalCsvParserTests
             File.Delete(path);
         }
     }
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_VariousMalformedRows_When_FileIsParsed_Then_EachIsSkippedAndTheValidRowSurvives()
+    {
+        // Arrange
+        string path = Path.Combine(Path.GetTempPath(), "TEST_MALFORMED.csv");
+        File.WriteAllLines(path, new[]
+        {
+        "DATE,OPEN,HIGH,LOW,CLOSE,VOLUME",
+        "1/1/2024,100,105",                          // insufficient columns
+        "not-a-date,100,105,99,102,1000000",         // invalid date format
+        "3/1/2024,abc,105,99,102,1000000",           // non-numeric value
+        "4/1/2024,-100,105,99,102,1000000",          // non-positive OHLC
+        "5/1/2024,100,50,99,102,1000000",            // impossible structure (High < Open)
+        "6/1/2024,100,105,99,102,1000000",           // the only valid row
+    });
+
+        try
+        {
+            var parser = new LocalCsvParser();
+
+            // Act
+            var bars = parser.ParseFile(path);
+
+            // Assert
+            bars.Should().HaveCount(1);
+            bars[0].Timestamp.Should().Be(new DateTime(2024, 1, 6));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+    [Trait("Category", "Financial Invariant")]
+    [Fact]
+    public void Given_RowsOutOfChronologicalOrderInTheFile_When_FileIsParsed_Then_OutputIsSortedByTimestamp()
+    {
+        // Arrange
+        string path = Path.Combine(Path.GetTempPath(), "TEST_UNSORTED.csv");
+        File.WriteAllLines(path, new[]
+        {
+        "DATE,OPEN,HIGH,LOW,CLOSE,VOLUME",
+        "3/1/2024,100,105,99,102,1000000",
+        "1/1/2024,100,105,99,102,1000000",
+        "2/1/2024,100,105,99,102,1000000",
+    });
+
+        try
+        {
+            var parser = new LocalCsvParser();
+
+            // Act
+            var bars = parser.ParseFile(path);
+
+            // Assert
+            bars.Should().HaveCount(3);
+            bars[0].Timestamp.Should().Be(new DateTime(2024, 1, 1));
+            bars[1].Timestamp.Should().Be(new DateTime(2024, 1, 2));
+            bars[2].Timestamp.Should().Be(new DateTime(2024, 1, 3));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
